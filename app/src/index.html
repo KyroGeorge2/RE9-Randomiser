@@ -709,11 +709,26 @@
           <span style="font-family:var(--mono); color:var(--muted); font-size:0.7rem;">STATUS</span><br>
           <span id="displayLobbyStatus" style="font-family:var(--mono); font-size:0.9rem; color:var(--amber);">WAITING</span>
         </div>
+        <div>
+          <span style="font-family:var(--mono); color:var(--muted); font-size:0.7rem;">RACE TIME</span><br>
+          <span id="displayRaceTimer" style="font-family:var(--mono); font-size:1.4rem; color:var(--green);">--:--:--</span>
+        </div>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
           <button onclick="copyLobbyCode()" class="btn-secondary" style="font-size:0.7rem; padding:0.4rem 0.8rem;">📋 COPY CODE</button>
-          <button onclick="startRace()" id="btnStartRace" class="btn-primary" style="font-size:0.7rem; padding:0.4rem 0.8rem; display:none;">▶ START RACE</button>
+          <button onclick="toggleReady()" id="btnReady" class="btn-secondary" style="font-size:0.7rem; padding:0.4rem 0.8rem; border-color:var(--green); color:var(--green);">✓ READY UP</button>
+          <button onclick="declareFinish()" id="btnFinish" class="btn-primary" style="font-size:0.7rem; padding:0.4rem 0.8rem; display:none;">🏁 FINISH</button>
           <button onclick="leaveLobby()" class="btn-secondary" style="font-size:0.7rem; padding:0.4rem 0.8rem; border-color:var(--blood); color:var(--blood);">✕ LEAVE</button>
         </div>
+      </div>
+      <!-- Countdown overlay -->
+      <div id="countdownDisplay" style="display:none; text-align:center; padding:1rem 0;">
+        <span style="font-family:var(--display); font-size:4rem; color:var(--red-bright);" id="countdownNumber">3</span>
+      </div>
+      <!-- Finish approval banner -->
+      <div id="finishApprovalBanner" style="display:none; background:#0a1a0a; border:1px solid var(--green); padding:1rem; margin-top:1rem; font-family:var(--mono); font-size:0.8rem; text-align:center;">
+        <span id="finishApprovalText"></span><br><br>
+        <button onclick="approveFinish()" class="btn-primary" style="font-size:0.7rem; padding:0.4rem 1rem; margin-right:0.5rem;">✓ APPROVE</button>
+        <button onclick="disputeFinish()" class="btn-secondary" style="font-size:0.7rem; padding:0.4rem 1rem; border-color:var(--red-bright); color:var(--red-bright);">✕ DISPUTE</button>
       </div>
     </div>
 
@@ -724,7 +739,7 @@
     </div>
 
     <div style="font-family:var(--mono); font-size:0.65rem; color:var(--muted); margin-top:1rem; text-align:center;">
-      Stats sync every 5 seconds from your local game file · Deaths tracked via REFramework hook
+      Deaths sync every 5 seconds · Item box use will randomise items — avoid during a race run
     </div>
   </div>
 
@@ -1490,42 +1505,29 @@ function switchTab(tab) {
 const FIREBASE_URL = 'https://re9-randomiser-default-rtdb.europe-west1.firebasedatabase.app'
 
 let raceState = {
-  lobbyCode: null,
-  playerId:  null,
-  playerName: null,
-  isHost: false,
-  syncInterval: null,
-  statsWatcher: null,
+  lobbyCode: null, playerId: null, playerName: null, isHost: false,
+  syncInterval: null, timerInterval: null, isReady: false,
+  raceStartTime: null, myFinishTime: null,
 }
 
 function raceStatus(msg, color = 'var(--muted)') {
   const el = document.getElementById('raceStatus')
-  el.style.color = color
-  el.textContent = msg
+  el.style.color = color; el.textContent = msg
 }
 
 async function fbSet(path, data) {
-  const res = await fetch(`${FIREBASE_URL}/${path}.json`, {
-    method: 'PUT',
-    body: JSON.stringify(data)
-  })
+  const res = await fetch(`${FIREBASE_URL}/${path}.json`, { method: 'PUT', body: JSON.stringify(data) })
   return res.ok
 }
-
 async function fbGet(path) {
   const res = await fetch(`${FIREBASE_URL}/${path}.json`)
   if (!res.ok) return null
   return res.json()
 }
-
 async function fbPatch(path, data) {
-  const res = await fetch(`${FIREBASE_URL}/${path}.json`, {
-    method: 'PATCH',
-    body: JSON.stringify(data)
-  })
+  const res = await fetch(`${FIREBASE_URL}/${path}.json`, { method: 'PATCH', body: JSON.stringify(data) })
   return res.ok
 }
-
 async function fbDelete(path) {
   await fetch(`${FIREBASE_URL}/${path}.json`, { method: 'DELETE' })
 }
@@ -1536,38 +1538,32 @@ function generateLobbyCode() {
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
   return code
 }
+function generatePlayerId() { return Math.random().toString(36).substr(2, 9) }
 
-function generatePlayerId() {
-  return Math.random().toString(36).substr(2, 9)
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
 }
 
 async function createLobby() {
   const name = document.getElementById('racePlayerName').value.trim()
   const seed = document.getElementById('raceSeedInput').value.trim() || document.getElementById('seedInput').value.trim() || 'UNKNOWN'
   if (!name) { raceStatus('Enter your name first.', 'var(--red-bright)'); return }
-
   const code = generateLobbyCode()
   const playerId = generatePlayerId()
-  raceState.lobbyCode  = code
-  raceState.playerId   = playerId
-  raceState.playerName = name
-  raceState.isHost     = true
-
+  raceState.lobbyCode = code; raceState.playerId = playerId
+  raceState.playerName = name; raceState.isHost = true
   const lobbyData = {
-    code, seed,
-    host: playerId,
-    status: 'waiting',
-    created: Date.now(),
-    players: {
-      [playerId]: { name, deaths: 0, time: 0, status: 'waiting', isHost: true, lastUpdate: Date.now() }
-    }
+    code, seed, host: playerId, status: 'waiting', created: Date.now(),
+    players: { [playerId]: { name, deaths: 0, ready: false, status: 'waiting', isHost: true, lastUpdate: Date.now() } }
   }
-
   raceStatus('Creating lobby...', 'var(--amber)')
   const ok = await fbSet(`lobbies/${code}`, lobbyData)
-  if (!ok) { raceStatus('Failed to create lobby. Check internet connection.', 'var(--red-bright)'); return }
-
-  enterLobby(code, seed, true)
+  if (!ok) { raceStatus('Failed to create lobby.', 'var(--red-bright)'); return }
+  enterLobby(code, seed)
 }
 
 async function joinLobby() {
@@ -1575,93 +1571,191 @@ async function joinLobby() {
   const code = document.getElementById('joinCodeInput').value.trim().toUpperCase()
   if (!name) { raceStatus('Enter your name first.', 'var(--red-bright)'); return }
   if (!code || code.length < 4) { raceStatus('Enter a valid lobby code.', 'var(--red-bright)'); return }
-
   raceStatus('Joining lobby...', 'var(--amber)')
   const lobby = await fbGet(`lobbies/${code}`)
-  if (!lobby) { raceStatus('Lobby not found. Check the code.', 'var(--red-bright)'); return }
-  if (lobby.status === 'finished') { raceStatus('This race has already finished.', 'var(--red-bright)'); return }
-
+  if (!lobby) { raceStatus('Lobby not found.', 'var(--red-bright)'); return }
+  if (lobby.status === 'finished') { raceStatus('Race already finished.', 'var(--red-bright)'); return }
   const playerId = generatePlayerId()
-  raceState.lobbyCode  = code
-  raceState.playerId   = playerId
-  raceState.playerName = name
-  raceState.isHost     = false
-
+  raceState.lobbyCode = code; raceState.playerId = playerId
+  raceState.playerName = name; raceState.isHost = false
   await fbPatch(`lobbies/${code}/players/${playerId}`, {
-    name, deaths: 0, time: 0, status: 'waiting', isHost: false, lastUpdate: Date.now()
+    name, deaths: 0, ready: false, status: 'waiting', isHost: false, lastUpdate: Date.now()
   })
-
-  enterLobby(code, lobby.seed, false)
+  enterLobby(code, lobby.seed)
 }
 
-function enterLobby(code, seed, isHost) {
+function enterLobby(code, seed) {
   document.getElementById('raceLobbyPanel').style.display = ''
   document.getElementById('displayLobbyCode').textContent = code
   document.getElementById('displayLobbySeed').textContent = seed
   document.getElementById('displayLobbyStatus').textContent = 'WAITING'
-  document.getElementById('btnStartRace').style.display = isHost ? '' : 'none'
-  raceStatus('')
-  startLobbySync()
+  document.getElementById('btnReady').style.display = ''
+  document.getElementById('btnFinish').style.display = 'none'
+  raceStatus(''); startLobbySync()
 }
 
-async function startRace() {
-  if (!raceState.isHost) return
-  await fbPatch(`lobbies/${raceState.lobbyCode}`, { status: 'racing', startTime: Date.now() })
-  document.getElementById('displayLobbyStatus').textContent = 'RACING'
-  document.getElementById('displayLobbyStatus').style.color = 'var(--green)'
+async function toggleReady() {
+  raceState.isReady = !raceState.isReady
+  const btn = document.getElementById('btnReady')
+  btn.textContent = raceState.isReady ? '✓ READY (click to unready)' : '✓ READY UP'
+  btn.style.borderColor = raceState.isReady ? 'var(--amber)' : 'var(--green)'
+  btn.style.color = raceState.isReady ? 'var(--amber)' : 'var(--green)'
+  await fbPatch(`lobbies/${raceState.lobbyCode}/players/${raceState.playerId}`, { ready: raceState.isReady })
+  // Check if all players ready
+  const lobby = await fbGet(`lobbies/${raceState.lobbyCode}`)
+  if (!lobby) return
+  const players = Object.values(lobby.players)
+  if (players.length >= 2 && players.every(p => p.ready)) {
+    startCountdown()
+  }
+}
+
+function startCountdown() {
+  fbPatch(`lobbies/${raceState.lobbyCode}`, { status: 'countdown' })
+  let count = 3
+  document.getElementById('countdownDisplay').style.display = ''
+  document.getElementById('countdownNumber').textContent = count
+  const interval = setInterval(async () => {
+    count--
+    if (count > 0) {
+      document.getElementById('countdownNumber').textContent = count
+    } else {
+      clearInterval(interval)
+      document.getElementById('countdownDisplay').style.display = 'none'
+      const startTime = Date.now()
+      raceState.raceStartTime = startTime
+      await fbPatch(`lobbies/${raceState.lobbyCode}`, { status: 'racing', startTime })
+      await fbPatch(`lobbies/${raceState.lobbyCode}/players/${raceState.playerId}`, { status: 'racing' })
+      document.getElementById('btnReady').style.display = 'none'
+      document.getElementById('btnFinish').style.display = ''
+      startAppTimer()
+    }
+  }, 1000)
+}
+
+function startAppTimer() {
+  if (raceState.timerInterval) clearInterval(raceState.timerInterval)
+  raceState.timerInterval = setInterval(() => {
+    if (!raceState.raceStartTime) return
+    const elapsed = Date.now() - raceState.raceStartTime
+    document.getElementById('displayRaceTimer').textContent = formatTime(elapsed)
+  }, 1000)
+}
+
+async function declareFinish() {
+  if (!raceState.raceStartTime) return
+  const finishTime = Date.now() - raceState.raceStartTime
+  raceState.myFinishTime = finishTime
+  if (raceState.timerInterval) clearInterval(raceState.timerInterval)
+  await fbPatch(`lobbies/${raceState.lobbyCode}/players/${raceState.playerId}`, {
+    status: 'pending_approval', finishTime, finishAt: Date.now()
+  })
+  document.getElementById('btnFinish').style.display = 'none'
+  raceStatus('Finish submitted — waiting for opponent approval...', 'var(--amber)')
+}
+
+async function approveFinish() {
+  // Find the pending player
+  const lobby = await fbGet(`lobbies/${raceState.lobbyCode}`)
+  if (!lobby) return
+  for (const [pid, p] of Object.entries(lobby.players || {})) {
+    if (p.status === 'pending_approval' && pid !== raceState.playerId) {
+      await fbPatch(`lobbies/${raceState.lobbyCode}/players/${pid}`, { status: 'finished' })
+    }
+  }
+  document.getElementById('finishApprovalBanner').style.display = 'none'
+  raceStatus('Finish approved!', 'var(--green)')
+}
+
+async function disputeFinish() {
+  const lobby = await fbGet(`lobbies/${raceState.lobbyCode}`)
+  if (!lobby) return
+  for (const [pid, p] of Object.entries(lobby.players || {})) {
+    if (p.status === 'pending_approval' && pid !== raceState.playerId) {
+      await fbPatch(`lobbies/${raceState.lobbyCode}/players/${pid}`, { status: 'racing' })
+    }
+  }
+  document.getElementById('finishApprovalBanner').style.display = 'none'
+  raceStatus('Finish disputed — player is back to racing.', 'var(--red-bright)')
 }
 
 function startLobbySync() {
   if (raceState.syncInterval) clearInterval(raceState.syncInterval)
   renderRacers()
   raceState.syncInterval = setInterval(async () => {
-    // Push local stats
+    // Push local death stats
     const statsPath = await getStatsPath()
-    let localStats = { deaths: 0, time: 0 }
+    let localDeaths = 0
     if (statsPath) {
       try {
         const raw = await window.electronAPI?.readFile?.({ filePath: statsPath })
-        if (raw) { const parsed = JSON.parse(raw); localStats = parsed }
+        if (raw) { const parsed = JSON.parse(raw); localDeaths = parsed.deaths || 0 }
       } catch(e) {}
     }
     await fbPatch(`lobbies/${raceState.lobbyCode}/players/${raceState.playerId}`, {
-      deaths: localStats.deaths,
-      time: localStats.time,
-      lastUpdate: Date.now()
+      deaths: localDeaths, lastUpdate: Date.now()
     })
-    // Pull all players
     renderRacers()
   }, 5000)
 }
 
+let _lastLobbyStatus = null
 async function renderRacers() {
   if (!raceState.lobbyCode) return
   const lobby = await fbGet(`lobbies/${raceState.lobbyCode}`)
   if (!lobby || !lobby.players) return
 
-  document.getElementById('displayLobbyStatus').textContent = (lobby.status || 'waiting').toUpperCase()
-  document.getElementById('displayLobbyStatus').style.color = lobby.status === 'racing' ? 'var(--green)' : 'var(--amber)'
+  const status = lobby.status || 'waiting'
+  document.getElementById('displayLobbyStatus').textContent = status.toUpperCase()
+  document.getElementById('displayLobbyStatus').style.color =
+    status === 'racing' ? 'var(--green)' : status === 'countdown' ? 'var(--red-bright)' : 'var(--amber)'
 
-  const players = Object.values(lobby.players)
-    .sort((a, b) => {
-      if (a.status === 'finished' && b.status !== 'finished') return -1
-      if (b.status === 'finished' && a.status !== 'finished') return 1
-      return a.time - b.time
-    })
+  // If race just started remotely (we're not host), sync timer
+  if (status === 'racing' && !raceState.raceStartTime && lobby.startTime) {
+    raceState.raceStartTime = lobby.startTime
+    document.getElementById('btnReady').style.display = 'none'
+    document.getElementById('btnFinish').style.display = ''
+    startAppTimer()
+  }
+
+  // Trigger countdown for non-host when status flips to countdown
+  if (status === 'countdown' && _lastLobbyStatus !== 'countdown' && !raceState.isHost) {
+    startCountdown()
+  }
+  _lastLobbyStatus = status
+
+  // Check for pending approval from another player
+  const pendingPlayer = Object.entries(lobby.players).find(([pid, p]) =>
+    p.status === 'pending_approval' && pid !== raceState.playerId
+  )
+  const banner = document.getElementById('finishApprovalBanner')
+  if (pendingPlayer) {
+    const [, p] = pendingPlayer
+    document.getElementById('finishApprovalText').textContent =
+      `${p.name} claims they finished in ${formatTime(p.finishTime || 0)} — approve?`
+    banner.style.display = ''
+  } else {
+    banner.style.display = 'none'
+  }
+
+  const players = Object.values(lobby.players).sort((a, b) => {
+    if (a.status === 'finished' && b.status !== 'finished') return -1
+    if (b.status === 'finished' && a.status !== 'finished') return 1
+    return (a.finishTime || Infinity) - (b.finishTime || Infinity)
+  })
 
   const container = document.getElementById('racersList')
   container.innerHTML = ''
   players.forEach((p, i) => {
-    const isMe = false // can't easily track without more state
-    const mins = Math.floor((p.time || 0) / 60)
-    const secs = String(Math.floor((p.time || 0) % 60)).padStart(2, '0')
-    const timeStr = p.time > 0 ? `${mins}:${secs}` : '--:--'
+    const timeStr = p.finishTime ? formatTime(p.finishTime) : (raceState.raceStartTime ? '...' : '--:--:--')
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`
-    const statusColor = p.status === 'finished' ? 'var(--green)' : p.status === 'racing' ? 'var(--amber)' : 'var(--muted)'
+    const statusColor = p.status === 'finished' ? 'var(--green)' : p.status === 'pending_approval' ? 'var(--amber)' : p.status === 'racing' ? '#fff' : 'var(--muted)'
+    const readyBadge = status === 'waiting' ? `<span style="color:${p.ready ? 'var(--green)' : 'var(--muted)'}; font-size:0.65rem;">${p.ready ? '✓ READY' : 'NOT READY'}</span>` : ''
     container.innerHTML += `
-      <div style="display:grid; grid-template-columns:2rem 1fr auto auto auto; align-items:center; gap:1rem; padding:0.8rem 1rem; border-bottom:1px solid var(--border); font-family:var(--mono);">
+      <div style="display:grid; grid-template-columns:2rem 1fr auto auto auto auto; align-items:center; gap:1rem; padding:0.8rem 1rem; border-bottom:1px solid var(--border); font-family:var(--mono);">
         <span style="font-size:1.2rem; text-align:center;">${medal}</span>
-        <span style="color:#fff; font-size:0.85rem;">${p.name}${p.isHost ? ' <span style="color:var(--muted);font-size:0.65rem;">HOST</span>' : ''}</span>
+        <span style="color:#fff; font-size:0.85rem;">${p.name}${p.isHost ? ' <span style="color:var(--muted);font-size:0.6rem;">HOST</span>' : ''}</span>
+        ${readyBadge}
         <span style="color:var(--red-bright); font-size:0.85rem;">💀 ${p.deaths || 0}</span>
         <span style="color:var(--amber); font-size:0.85rem;">⏱ ${timeStr}</span>
         <span style="color:${statusColor}; font-size:0.65rem; letter-spacing:1px;">${(p.status || 'waiting').toUpperCase()}</span>
@@ -1672,19 +1766,22 @@ async function renderRacers() {
 function copyLobbyCode() {
   if (raceState.lobbyCode) {
     navigator.clipboard.writeText(raceState.lobbyCode)
-    raceStatus('Code copied to clipboard!', 'var(--green)')
+    raceStatus('Code copied!', 'var(--green)')
     setTimeout(() => raceStatus(''), 2000)
   }
 }
 
 async function leaveLobby() {
   if (raceState.syncInterval) clearInterval(raceState.syncInterval)
+  if (raceState.timerInterval) clearInterval(raceState.timerInterval)
   if (raceState.lobbyCode && raceState.playerId) {
     await fbDelete(`lobbies/${raceState.lobbyCode}/players/${raceState.playerId}`)
     if (raceState.isHost) await fbDelete(`lobbies/${raceState.lobbyCode}`)
   }
-  raceState = { lobbyCode: null, playerId: null, playerName: null, isHost: false, syncInterval: null }
+  raceState = { lobbyCode: null, playerId: null, playerName: null, isHost: false, syncInterval: null, timerInterval: null, isReady: false, raceStartTime: null, myFinishTime: null }
   document.getElementById('raceLobbyPanel').style.display = 'none'
+  document.getElementById('displayRaceTimer').textContent = '--:--:--'
+  _lastLobbyStatus = null
   raceStatus('Left lobby.', 'var(--muted)')
 }
 
@@ -1693,6 +1790,7 @@ async function getStatsPath() {
   if (gp) return await window.electronAPI?.getStatsPath?.({ gamePath: gp }) || null
   return null
 }
+
 
 function updateClock() {
   const now = new Date();

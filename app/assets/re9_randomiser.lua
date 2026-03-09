@@ -16,8 +16,8 @@ local hook_installed = false
 local _is_adding    = false
 local pending_swaps = {}
 local reroll_pool   = {}
-local given_items   = {}  -- weapons/parts already given (no dupes)
-local given_keys    = {}  -- key items already given (no dupes)
+local given_items   = {}
+local given_keys    = {}
 
 -- Item ID prefixes that should re-randomize every pickup (not fixed by seed)
 -- Default quantities for randomised replacements
