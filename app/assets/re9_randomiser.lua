@@ -16,7 +16,8 @@ local hook_installed = false
 local _is_adding    = false
 local pending_swaps = {}
 local reroll_pool   = {}
-local given_items   = {}
+local given_items   = {}  -- weapons/parts already given (no dupes)
+local given_keys    = {}  -- key items already given (no dupes)
 
 -- Item ID prefixes that should re-randomize every pickup (not fixed by seed)
 -- Default quantities for randomised replacements
@@ -297,6 +298,8 @@ local function install_hook()
                                     if c and c.id_obj and not is_blacklisted(c.name) then
                                         if is_weapon_or_part(c.name) and given_items[c.name] then
                                             -- skip already-given weapons
+                                        elseif c.name and c.name:match("^it60_") and given_keys[c.name] then
+                                            -- skip already-given key items
                                         else
                                             if inv then
                                                 local ok_c, can = pcall(function() return inv:call("canContain(app.ItemID)", c.id_obj) end)
@@ -322,6 +325,9 @@ local function install_hook()
                                     local needs_reroll = false
                                     -- Already given this weapon? Reroll
                                     if is_weapon_or_part(final_name) and given_items[final_name] then
+                                        needs_reroll = true
+                                    -- Already given this key item? Reroll
+                                    elseif final_name and final_name:match("^it60_") and given_keys[final_name] then
                                         needs_reroll = true
                                     -- Seed wants to give a weapon: only allow 15% of the time
                                     elseif is_weapon_or_part(final_name) and math.random(100) > 15 then
@@ -356,6 +362,7 @@ local function install_hook()
                                         if ok5 and type(amt) == "number" and amt > 0 then count = amt end
                                     end
                                     if is_weapon_or_part(final_name) then given_items[final_name] = true end
+                                    if final_name and final_name:match("^it60_") then given_keys[final_name] = true end
                                     table.insert(pending_swaps, { orig_id_str = id_str, repl = { id_obj = final_id_obj, name = final_name }, count = count })
                                 end
                             end
@@ -418,7 +425,7 @@ re.on_draw_ui(function()
     imgui.text("Hook: " .. (hook_installed and "mergeOrAdd ✓" or "NOT installed ✗"))
 
     if imgui.button("Reload seed.json") then
-        seed_data = nil; substitutions = {}; swap_count = 0; swap_log = {}; reroll_pool = {}; given_items = {}
+        seed_data = nil; substitutions = {}; swap_count = 0; swap_log = {}; reroll_pool = {}; given_items = {}; given_keys = {}
         if not next(id_by_name) then pcall(build_item_id_map) end
         pcall(load_seed)
     end
