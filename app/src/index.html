@@ -657,6 +657,14 @@
 
   <div style="font-family:var(--mono); color:var(--red-bright); font-size:0.7rem; letter-spacing:3px; margin-bottom:1.5rem;">⚡ RACE MODE — COMPETE WITH FRIENDS IN REAL TIME</div>
 
+  <!-- Sub-tabs -->
+  <div style="display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:1.5rem;">
+    <button onclick="switchRaceTab('lobby')" id="rtab-lobby" style="font-family:var(--mono);font-size:0.7rem;letter-spacing:2px;padding:0.6rem 1.5rem;background:var(--blood);color:#fff;border:none;border-bottom:2px solid var(--red);cursor:pointer;">LOBBY</button>
+    <button onclick="switchRaceTab('leaderboard')" id="rtab-leaderboard" style="font-family:var(--mono);font-size:0.7rem;letter-spacing:2px;padding:0.6rem 1.5rem;background:transparent;color:var(--muted);border:none;border-bottom:2px solid transparent;cursor:pointer;">🏆 GLOBAL LEADERBOARD</button>
+  </div>
+
+  <!-- Lobby sub-tab -->
+  <div id="rpage-lobby">
   <!-- Create / Join -->
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
 
@@ -667,10 +675,19 @@
         <input type="text" id="racePlayerName" placeholder="e.g. KyroGeorge" maxlength="16"
           style="width:100%; background:var(--dark); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:0.8rem; padding:0.5rem 0.8rem;">
       </div>
-      <div style="margin-bottom:1rem;">
+      <div style="margin-bottom:0.8rem;">
         <label style="font-family:var(--mono); font-size:0.7rem; color:var(--muted); display:block; margin-bottom:0.4rem;">SEED (from randomiser tab)</label>
         <input type="text" id="raceSeedInput" placeholder="e.g. RACCOON7" maxlength="20"
           style="width:100%; background:var(--dark); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:0.8rem; padding:0.5rem 0.8rem;">
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label style="font-family:var(--mono); font-size:0.7rem; color:var(--muted); display:block; margin-bottom:0.4rem;">DIFFICULTY</label>
+        <select id="raceDifficulty" style="width:100%; background:var(--dark); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:0.8rem; padding:0.5rem 0.8rem;">
+          <option value="Standard (Modern)">Standard (Modern)</option>
+          <option value="Standard (Classic)">Standard (Classic)</option>
+          <option value="Casual">Casual</option>
+          <option value="Insanity">Insanity</option>
+        </select>
       </div>
       <button onclick="createLobby()" class="btn-primary" style="width:100%;">CREATE LOBBY</button>
     </div>
@@ -744,9 +761,34 @@
   </div>
 
   <div id="raceStatus" style="font-family:var(--mono); font-size:0.75rem; color:var(--muted); margin-top:1rem; text-align:center;"></div>
-</div>
+  </div><!-- #rpage-lobby -->
 
-</main>
+  <!-- Leaderboard sub-tab -->
+  <div id="rpage-leaderboard" style="display:none;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.8rem;">
+      <div style="font-family:var(--mono); color:var(--muted); font-size:0.7rem;">All approved finishes — sorted by time</div>
+      <div style="display:flex; gap:0.5rem; align-items:center;">
+        <select id="lbDiffFilter" onchange="loadLeaderboard()" style="background:var(--dark); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:0.7rem; padding:0.3rem 0.6rem;">
+          <option value="">All Difficulties</option>
+          <option value="Insanity">Insanity</option>
+          <option value="Standard (Classic)">Standard (Classic)</option>
+          <option value="Standard (Modern)">Standard (Modern)</option>
+          <option value="Casual">Casual</option>
+        </select>
+        <button onclick="loadLeaderboard()" class="btn-secondary" style="font-size:0.7rem; padding:0.3rem 0.8rem;">↻ REFRESH</button>
+      </div>
+    </div>
+    <div style="background:var(--panel); border:1px solid var(--border);">
+      <div style="display:grid; grid-template-columns:2.5rem 1fr 5rem 6rem 7rem; gap:0.5rem; padding:0.6rem 1rem; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:0.65rem; color:var(--muted); letter-spacing:1px;">
+        <span>#</span><span>PLAYER</span><span>DEATHS</span><span>TIME</span><span>DIFFICULTY</span>
+      </div>
+      <div id="leaderboardList" style="min-height:4rem;">
+        <div style="padding:2rem; text-align:center; font-family:var(--mono); font-size:0.7rem; color:var(--muted);">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
 
 <footer>
   RE: REQUIEM ITEM RANDOMISER — Community Tool — Not affiliated with Capcom — Softlock protection active by default
@@ -1501,13 +1543,69 @@ function switchTab(tab) {
   document.getElementById('tab-race').style.borderBottomColor = tab === 'race' ? 'var(--red)' : 'transparent'
 }
 
+// ─── RACE SUB-TAB SWITCHING ───────────────────────────────────────────────────
+function switchRaceTab(tab) {
+  document.getElementById('rpage-lobby').style.display       = tab === 'lobby' ? '' : 'none'
+  document.getElementById('rpage-leaderboard').style.display = tab === 'leaderboard' ? '' : 'none'
+  document.getElementById('rtab-lobby').style.background          = tab === 'lobby' ? 'var(--blood)' : 'transparent'
+  document.getElementById('rtab-lobby').style.color               = tab === 'lobby' ? '#fff' : 'var(--muted)'
+  document.getElementById('rtab-lobby').style.borderBottomColor   = tab === 'lobby' ? 'var(--red)' : 'transparent'
+  document.getElementById('rtab-leaderboard').style.background        = tab === 'leaderboard' ? 'var(--blood)' : 'transparent'
+  document.getElementById('rtab-leaderboard').style.color             = tab === 'leaderboard' ? '#fff' : 'var(--muted)'
+  document.getElementById('rtab-leaderboard').style.borderBottomColor = tab === 'leaderboard' ? 'var(--red)' : 'transparent'
+  if (tab === 'leaderboard') loadLeaderboard()
+}
+
+async function loadLeaderboard() {
+  const container = document.getElementById('leaderboardList')
+  container.innerHTML = '<div style="padding:2rem; text-align:center; font-family:var(--mono); font-size:0.7rem; color:var(--muted);">Loading...</div>'
+  const data = await fbGet('leaderboard')
+  if (!data) {
+    container.innerHTML = '<div style="padding:2rem; text-align:center; font-family:var(--mono); font-size:0.7rem; color:var(--muted);">No runs recorded yet.</div>'
+    return
+  }
+  const diffFilter = document.getElementById('lbDiffFilter').value
+  let entries = Object.values(data)
+  if (diffFilter) entries = entries.filter(e => e.difficulty === diffFilter)
+  entries.sort((a, b) => a.finishTime - b.finishTime)
+  if (!entries.length) {
+    container.innerHTML = '<div style="padding:2rem; text-align:center; font-family:var(--mono); font-size:0.7rem; color:var(--muted);">No runs for this filter.</div>'
+    return
+  }
+  const diffColor = { 'Insanity': '#e74c3c', 'Standard (Classic)': '#f39c12', 'Standard (Modern)': '#27ae60', 'Casual': '#3498db' }
+  container.innerHTML = entries.map((e, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`
+    const dc = diffColor[e.difficulty] || 'var(--muted)'
+    const date = new Date(e.date).toLocaleDateString('en-GB')
+    return `<div style="display:grid; grid-template-columns:2.5rem 1fr 5rem 6rem 7rem; gap:0.5rem; align-items:center; padding:0.7rem 1rem; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:0.78rem;">
+      <span style="text-align:center;">${medal}</span>
+      <span style="color:#fff;">${e.player} <span style="color:var(--muted); font-size:0.6rem;">${date}</span></span>
+      <span style="color:var(--red-bright);">💀 ${e.deaths}</span>
+      <span style="color:var(--amber);">${formatTime(e.finishTime)}</span>
+      <span style="color:${dc}; font-size:0.65rem;">${e.difficulty}</span>
+    </div>`
+  }).join('')
+}
+
+async function submitToLeaderboard(playerName, finishTime, deaths, difficulty) {
+  const entry = {
+    player: playerName,
+    finishTime,
+    deaths,
+    difficulty,
+    date: Date.now()
+  }
+  const key = `${Date.now()}_${Math.random().toString(36).substr(2,5)}`
+  await fbSet(`leaderboard/${key}`, entry)
+}
+
 // ─── FIREBASE RACE MODE ───────────────────────────────────────────────────────
 const FIREBASE_URL = 'https://re9-randomiser-default-rtdb.europe-west1.firebasedatabase.app'
 
 let raceState = {
   lobbyCode: null, playerId: null, playerName: null, isHost: false,
   syncInterval: null, timerInterval: null, isReady: false,
-  raceStartTime: null, myFinishTime: null,
+  raceStartTime: null, myFinishTime: null, difficulty: 'Standard (Modern)',
 }
 
 function raceStatus(msg, color = 'var(--muted)') {
@@ -1556,8 +1654,10 @@ async function createLobby() {
   const playerId = generatePlayerId()
   raceState.lobbyCode = code; raceState.playerId = playerId
   raceState.playerName = name; raceState.isHost = true
+  const difficulty = document.getElementById('raceDifficulty').value
+  raceState.difficulty = difficulty
   const lobbyData = {
-    code, seed, host: playerId, status: 'waiting', created: Date.now(),
+    code, seed, difficulty, host: playerId, status: 'waiting', created: Date.now(),
     players: { [playerId]: { name, deaths: 0, ready: false, status: 'waiting', isHost: true, lastUpdate: Date.now() } }
   }
   raceStatus('Creating lobby...', 'var(--amber)')
@@ -1578,6 +1678,7 @@ async function joinLobby() {
   const playerId = generatePlayerId()
   raceState.lobbyCode = code; raceState.playerId = playerId
   raceState.playerName = name; raceState.isHost = false
+  raceState.difficulty = lobby.difficulty || 'Standard (Modern)'
   await fbPatch(`lobbies/${code}/players/${playerId}`, {
     name, deaths: 0, ready: false, status: 'waiting', isHost: false, lastUpdate: Date.now()
   })
@@ -1655,16 +1756,26 @@ async function declareFinish() {
 }
 
 async function approveFinish() {
-  // Find the pending player
   const lobby = await fbGet(`lobbies/${raceState.lobbyCode}`)
   if (!lobby) return
   for (const [pid, p] of Object.entries(lobby.players || {})) {
     if (p.status === 'pending_approval' && pid !== raceState.playerId) {
       await fbPatch(`lobbies/${raceState.lobbyCode}/players/${pid}`, { status: 'finished' })
+      // Submit to global leaderboard
+      await submitToLeaderboard(p.name, p.finishTime, p.deaths || 0, raceState.difficulty || 'Standard (Modern)')
     }
   }
   document.getElementById('finishApprovalBanner').style.display = 'none'
   raceStatus('Finish approved!', 'var(--green)')
+  // If approver also finished, submit their time too
+  if (raceState.myFinishTime) {
+    const statsPath = await getStatsPath()
+    let myDeaths = 0
+    if (statsPath) {
+      try { const raw = await window.electronAPI?.readFile?.({ filePath: statsPath }); if (raw) myDeaths = JSON.parse(raw).deaths || 0 } catch(e) {}
+    }
+    await submitToLeaderboard(raceState.playerName, raceState.myFinishTime, myDeaths, raceState.difficulty || 'Standard (Modern)')
+  }
 }
 
 async function disputeFinish() {
@@ -1778,7 +1889,7 @@ async function leaveLobby() {
     await fbDelete(`lobbies/${raceState.lobbyCode}/players/${raceState.playerId}`)
     if (raceState.isHost) await fbDelete(`lobbies/${raceState.lobbyCode}`)
   }
-  raceState = { lobbyCode: null, playerId: null, playerName: null, isHost: false, syncInterval: null, timerInterval: null, isReady: false, raceStartTime: null, myFinishTime: null }
+  raceState = { lobbyCode: null, playerId: null, playerName: null, isHost: false, syncInterval: null, timerInterval: null, isReady: false, raceStartTime: null, myFinishTime: null, difficulty: 'Standard (Modern)' }
   document.getElementById('raceLobbyPanel').style.display = 'none'
   document.getElementById('displayRaceTimer').textContent = '--:--:--'
   _lastLobbyStatus = null

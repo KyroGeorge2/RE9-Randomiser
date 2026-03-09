@@ -31,6 +31,7 @@ local item_default_qty = {
     ["it50_00_006"] = 2,   -- Rare Metal
     ["it50_00_014"] = 2,   -- Gunpowder (Large)
     ["it50_00_018"] = 1,   -- Empty Injector
+    ["it99_50_003"] = 1,   -- Ink Ribbon
     ["it00_00_000"] = 1,   -- Med Injector (variant)
     ["it00_01_000"] = 1,   -- Med Injector
     ["it20_00_000"] = 2,   -- Hand Grenade
@@ -52,6 +53,7 @@ local safe_consumables = {
     -- it40_20_000, it40_20_001, it40_30_000 removed — no description, Leon-only ghosts
     ["it50_00_002"]=true, ["it50_00_006"]=true,
     ["it50_00_014"]=true, ["it50_00_018"]=true,
+    ["it99_50_003"]=true,  -- Ink Ribbon (needed for Insanity saves)
 }
 
 -- Known-good weapon IDs
