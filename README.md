@@ -121,5 +121,10 @@ Built exe appears in `app/dist/`.
 
 ---
 
+## 🐛 Bug Reports
+Found a bug? [Open an issue on GitHub](../../issues) — include the item ID from the Recent Swaps panel if it's item-related.
+
+---
+
 ## Contributing
 PRs welcome. If you find a `?` ghost item appearing or hit a softlock, open an issue with the item ID shown in the **Recent Swaps** panel in the REFramework overlay.
