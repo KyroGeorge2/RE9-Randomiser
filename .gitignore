@@ -1,0 +1,11 @@
+# Personal seed files
+seed.json
+
+# Electron build output
+app/node_modules/
+app/dist/
+app/build/
+
+# OS
+.DS_Store
+Thumbs.db

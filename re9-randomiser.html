@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RE: Requiem — Item Randomiser</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Barlow:wght@300;400;600&display=swap');
+
+  :root {
+    --red: #c0392b;
+    --red-bright: #e74c3c;
+    --blood: #7b0d0d;
+    --dark: #0a0a0a;
+    --panel: #111111;
+    --panel2: #181818;
+    --border: #2a2a2a;
+    --text: #d4d4d4;
+    --muted: #666;
+    --green: #27ae60;
+    --amber: #f39c12;
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Bebas Neue', cursive;
+    --body: 'Barlow', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  header {
+    border-bottom: 1px solid var(--blood);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, #150000 0%, transparent 100%);
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-size: 2.4rem;
+    letter-spacing: 4px;
+    color: var(--red-bright);
+    text-shadow: 0 0 20px rgba(231,76,60,0.4);
+  }
+
+  .logo span { color: var(--muted); font-size: 1rem; font-family: var(--mono); display: block; letter-spacing: 8px; margin-top: -4px; }
+
+  .status-bar {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .status-bar .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .seed-section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 1rem;
+    align-items: end;
+  }
+
+  label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"], input[type="number"] {
+    background: var(--dark);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 1rem;
+    padding: 0.6rem 0.8rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus { border-color: var(--red); }
+
+  button {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    padding: 0.7rem 1.4rem;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--red);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--red-bright); box-shadow: 0 0 15px rgba(231,76,60,0.4); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--red); color: var(--text); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--blood);
+    font-size: 0.65rem;
+    padding: 0.4rem 0.8rem;
+  }
+  .btn-danger:hover { background: var(--blood); color: #fff; }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .option-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 1rem 1.2rem;
+  }
+
+  .option-card h3 {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+  }
+
+  .toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0;
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+
+  .toggle {
+    position: relative;
+    width: 36px; height: 18px;
+  }
+
+  .toggle input { display: none; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    background: var(--muted);
+    top: 3px; left: 3px;
+    transition: 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider { background: var(--blood); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--red-bright); }
+
+  /* Results area */
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .results-header h2 {
+    font-family: var(--display);
+    font-size: 1.6rem;
+    letter-spacing: 3px;
+    color: var(--red-bright);
+  }
+
+  .seed-display {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.8rem;
+  }
+
+  .seed-display span { color: var(--amber); }
+
+  .items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.8rem;
+  }
+
+  .item-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 0.8rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    animation: fadeIn 0.3s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  .item-icon {
+    width: 36px; height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    background: var(--dark);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .item-info { flex: 1; min-width: 0; }
+
+  .item-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .item-location {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .item-type {
+    font-size: 0.6rem;
+    font-family: var(--mono);
+    padding: 2px 6px;
+    border: 1px solid;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+
+  .type-key    { color: #3498db; border-color: #1a3a50; background: #0a1e2a; }
+  .type-weapon { color: var(--red-bright); border-color: var(--blood); background: #1a0505; }
+  .type-melee  { color: #c0392b; border-color: #3a1500; background: #1a0a00; }
+  .type-ammo   { color: var(--amber); border-color: #4a3000; background: #1a1000; }
+  .type-herb   { color: var(--green); border-color: #0d3318; background: #051a0a; }
+  .type-misc     { color: var(--muted); border-color: var(--border); background: var(--dark); }
+  .type-upgrade  { color: #9b59b6; border-color: #2e1b3a; background: #100a1a; }
+  .type-crafting { color: #e67e22; border-color: #3a2000; background: #1a0f00; }
+  .type-treasure { color: #f1c40f; border-color: #3a3000; background: #1a1500; }
+  .type-debug    { color: #444; border-color: #222; background: #0d0d0d; opacity: 0.5; }
+
+  .softlock-warning {
+    background: #1a0a00;
+    border: 1px solid #7a3a00;
+    border-left: 3px solid var(--amber);
+    padding: 0.8rem 1rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--amber);
+    margin-bottom: 1rem;
+    display: none;
+  }
+
+  .softlock-warning.visible { display: flex; gap: 0.8rem; align-items: center; }
+
+  .info-box {
+    background: #050d15;
+    border: 1px solid #0a2030;
+    border-left: 3px solid #3498db;
+    padding: 0.8rem 1rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: #5a9abe;
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted);
+  }
+
+  .empty-state .big {
+    font-family: var(--display);
+    font-size: 3rem;
+    letter-spacing: 4px;
+    color: var(--border);
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state p { font-family: var(--mono); font-size: 0.75rem; }
+
+  .stats-bar {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .stat span { color: var(--text); font-size: 0.9rem; display: block; }
+
+  .progress-bar {
+    height: 2px;
+    background: var(--border);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blood), var(--red-bright));
+    width: 0%;
+    transition: width 0.4s ease;
+  }
+
+  /* Item editor / list manager */
+  .editor-section {
+    margin-top: 2rem;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--blood);
+  }
+
+  .editor-header {
+    padding: 0.8rem 1.2rem;
+    background: var(--panel2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .editor-header h3 {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .editor-body {
+    padding: 1.2rem;
+    display: none;
+  }
+
+  .editor-body.open { display: block; }
+
+  .item-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .item-list-table th {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--dark);
+  }
+
+  .item-list-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid #1a1a1a;
+    vertical-align: middle;
+  }
+
+  .item-list-table tr:hover td { background: #141414; }
+
+  .item-list-table input[type="text"] {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.5rem;
+    width: 100%;
+  }
+
+  .item-list-table select {
+    background: var(--dark);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    padding: 0.3rem 0.4rem;
+    outline: none;
+    width: 100%;
+  }
+
+  .required-badge {
+    font-size: 0.55rem;
+    font-family: var(--mono);
+    background: #1a0a00;
+    color: var(--amber);
+    border: 1px solid #5a2a00;
+    padding: 1px 5px;
+    letter-spacing: 1px;
+  }
+
+  .add-item-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto auto;
+    gap: 0.6rem;
+    align-items: end;
+    padding: 1rem;
+    background: var(--dark);
+    border: 1px solid var(--border);
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1rem 2rem;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--border);
+    text-align: center;
+    margin-top: 3rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    REQUIEM
+    <span>ITEM RANDOMISER v1.0</span>
+  </div>
+  <div class="status-bar">
+    <span class="dot"></span>SYSTEM ONLINE<br>
+    <span id="clock"></span>
+  </div>
+</header>
+
+<main>
+
+  <div class="info-box">
+    ⚠ SOFTLOCK PROTECTION ENABLED — Key items are always shuffled within the same "required pool" and never replaced with consumables.<br>
+    All progression-critical items (keys, emblems, fuses etc.) will always appear somewhere in the run. Safe to randomise.
+  </div>
+
+  <div class="seed-section">
+    <div>
+      <label>Seed (leave blank for random)</label>
+      <input type="text" id="seedInput" placeholder="e.g. RACCOON7 or leave blank">
+    </div>
+    <div>
+      <label>Run #</label>
+      <input type="number" id="runNumber" value="1" min="1" max="999" style="width:80px">
+    </div>
+    <button class="btn-secondary" onclick="generateRandomSeed()">🎲 Random Seed</button>
+    <button class="btn-primary" onclick="randomise()">▶ RANDOMISE</button>
+  </div>
+
+  <div class="options-grid">
+    <div class="option-card">
+      <h3>Item Types</h3>
+      <div class="toggle-row">Firearms <label class="toggle"><input type="checkbox" id="opt_weapons" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Melee <label class="toggle"><input type="checkbox" id="opt_melee" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Ammo <label class="toggle"><input type="checkbox" id="opt_ammo" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Healing Items <label class="toggle"><input type="checkbox" id="opt_herbs" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Key Items <label class="toggle"><input type="checkbox" id="opt_keys" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Weapon Parts <label class="toggle"><input type="checkbox" id="opt_upgrades" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Crafting Mats <label class="toggle"><input type="checkbox" id="opt_crafting" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Treasures <label class="toggle"><input type="checkbox" id="opt_treasure" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Misc Items <label class="toggle"><input type="checkbox" id="opt_misc" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row" title="Empty/debug item slots from game files. Off by default.">Debug Slots <label class="toggle"><input type="checkbox" id="opt_debug"><span class="toggle-slider"></span></label></div>
+    </div>
+    <div class="option-card">
+      <h3>Softlock Protection</h3>
+      <div class="toggle-row">Key items stay in pool <label class="toggle"><input type="checkbox" id="opt_keyProtect" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Guarantee all required items <label class="toggle"><input type="checkbox" id="opt_guaranteeRequired" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Shuffle locations only <label class="toggle"><input type="checkbox" id="opt_locationShuffle"><span class="toggle-slider"></span></label></div>
+    </div>
+    <div class="option-card">
+      <h3>Extra Chaos</h3>
+      <div class="toggle-row">Allow duplicate items <label class="toggle"><input type="checkbox" id="opt_dupes"><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Randomise quantities <label class="toggle"><input type="checkbox" id="opt_qty" checked><span class="toggle-slider"></span></label></div>
+      <div class="toggle-row">Include joke/trap items <label class="toggle"><input type="checkbox" id="opt_traps"><span class="toggle-slider"></span></label></div>
+    </div>
+  </div>
+
+  <div id="softlockWarning" class="softlock-warning">
+    <span>⚠</span>
+    <span>Some key items are not guaranteed. You may encounter a softlock. Disable &quot;Key items stay in pool&quot; at your own risk!</span>
+  </div>
+
+  <div id="resultsArea">
+    <div class="empty-state">
+      <span class="big">INITIALISING</span>
+      <p>Configure your options and hit RANDOMISE to generate a seed.</p>
+    </div>
+  </div>
+
+  <!-- Item Editor -->
+  <div class="editor-section">
+    <div class="editor-header" onclick="toggleEditor()">
+      <h3>⚙ Item Pool Editor — Add / Edit / Remove Items</h3>
+      <span id="editorToggleIcon" style="font-family:var(--mono);font-size:0.7rem;color:var(--muted)">▼ EXPAND</span>
+    </div>
+    <div class="editor-body" id="editorBody">
+      <p style="font-family:var(--mono);font-size:0.7rem;color:var(--muted);margin-bottom:1rem">
+        Edit the item pool below. Mark items as <strong style="color:var(--amber)">REQUIRED</strong> to protect them from softlocks — they will always appear in the run.
+        Add items as you discover them in-game.
+      </p>
+
+      <table class="item-list-table" id="itemTable">
+        <thead>
+          <tr>
+            <th>NAME</th>
+            <th>LOCATION</th>
+            <th>TYPE</th>
+            <th>REQUIRED?</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="itemTableBody"></tbody>
+      </table>
+
+      <div class="add-item-row">
+        <div>
+          <label>Item Name</label>
+          <input type="text" id="newItemName" placeholder="e.g. Iron Key">
+        </div>
+        <div>
+          <label>Location / Area</label>
+          <input type="text" id="newItemLocation" placeholder="e.g. Village — Barn">
+        </div>
+        <div>
+          <label>Type</label>
+          <select id="newItemType">
+            <option value="key">Key Item</option>
+            <option value="weapon">Firearm</option>
+            <option value="melee">Melee</option>
+            <option value="ammo">Ammo</option>
+            <option value="herb">Herb/Heal</option>
+            <option value="upgrade">Weapon Part</option>
+            <option value="crafting">Crafting Mat</option>
+            <option value="treasure">Treasure</option>
+            <option value="misc">Misc</option>
+            <option value="debug">Debug Slot</option>
+          </select>
+        </div>
+        <div>
+          <label>Required?</label>
+          <select id="newItemRequired">
+            <option value="false">No</option>
+            <option value="true">Yes — Required</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="addItem()" style="align-self:end">+ ADD</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  RE: REQUIEM ITEM RANDOMISER — Community Tool — Not affiliated with Capcom — Softlock protection active by default
+</footer>
+
+<script>
+// ─── ITEM DATABASE ───────────────────────────────────────────────────────────
+// Populate this with actual RE9 items as they're discovered!
+// required: true = protected from softlocks (always included in run)
+let itemPool = [
+  // ── KEY ITEMS (it60_00_) ── required by default
+  { id:1, itemId:"it60_00_002", name:"Bolt Cutters", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:2, itemId:"it60_00_004", name:"Pencil", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:3, itemId:"it60_00_013", name:"Cherub Key", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:4, itemId:"it60_00_038", name:"Joint Plug [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:5, itemId:"it60_00_039", name:"Screwdriver [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:6, itemId:"it60_00_040", name:"Fuse [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:7, itemId:"it60_00_041", name:"Square Socket Wrench [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:8, itemId:"it60_00_042", name:"Forklift Keys [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:9, itemId:"it60_00_045", name:"West Wing Keycard [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:10, itemId:"it60_00_046", name:"East Wing Keycard [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:11, itemId:"it60_00_047", name:"Red Jewel [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:12, itemId:"it60_00_048", name:"Sun Quartz [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:13, itemId:"it60_00_049", name:"Moon Quartz [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:14, itemId:"it60_00_050", name:"Star Quartz [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:15, itemId:"it60_00_051", name:"Artificial Heart [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:16, itemId:"it60_00_053", name:"ID Wristband Lv.1 [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:17, itemId:"it60_00_055", name:"ID Wristband Lv.1 [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:18, itemId:"it60_00_063", name:"Corrosive [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:19, itemId:"it60_00_064", name:"Blood Specimen [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:20, itemId:"it60_00_065", name:"Blood Specimen [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:21, itemId:"it60_00_067", name:"Blood Specimen [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:22, itemId:"it60_00_068", name:"ID Wristband Lv.2 [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:23, itemId:"it60_00_069", name:"Pantry Key", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:24, itemId:"it60_00_073", name:"Organ Transport Box [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:25, itemId:"it60_00_074", name:"Wrench [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:26, itemId:"it60_00_075", name:"it60_00_075", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:27, itemId:"it60_00_076", name:"Wire Cutters [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:28, itemId:"it60_00_077", name:"Unicorn Trinket Box [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:29, itemId:"it60_00_078", name:"it60_00_078", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:30, itemId:"it60_00_079", name:"it60_00_079", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:31, itemId:"it60_00_080", name:"Emergency Exit Key [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:32, itemId:"it60_00_081", name:"Helicopter Key [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:33, itemId:"it60_00_082", name:"Investigation Report [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:34, itemId:"it60_00_083", name:"Photo of Grace [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:35, itemId:"it60_00_084", name:"Severed Hand [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:36, itemId:"it60_00_085", name:"Hourglass [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:37, itemId:"it60_00_086", name:"Double Helix Model [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:38, itemId:"it60_00_087", name:"it60_00_087", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:39, itemId:"it60_00_088", name:"it60_00_088", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:40, itemId:"it60_00_089", name:"Old Key [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:41, itemId:"it60_00_090", name:"Mechanic Jack", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:42, itemId:"it60_00_091", name:"BSAA Container Key", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:43, itemId:"it60_00_092", name:"Battery", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:44, itemId:"it60_00_093", name:"Gas Can", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:45, itemId:"it60_00_094", name:"Cedarbrook Apartments Key", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:46, itemId:"it60_00_095", name:"Gas Can with Fuel", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:47, itemId:"it60_00_096", name:"Signal Receiver", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:48, itemId:"it60_00_097", name:"Distributor", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:49, itemId:"it60_00_098", name:"Relay", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:50, itemId:"it60_00_103", name:"Rust Crank", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:51, itemId:"it60_00_104", name:"Valve Handwheel", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:52, itemId:"it60_00_105", name:"Animus Orb [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:53, itemId:"it60_00_106", name:"it60_00_106", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:54, itemId:"it60_00_107", name:"Noblesse Orb [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:55, itemId:"it60_00_108", name:"Broken Signal Receiver", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:56, itemId:"it60_00_109", name:"Repair Kit", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:57, itemId:"it60_00_110", name:"Locker Key", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:58, itemId:"it60_00_111", name:"Crank Lever [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:59, itemId:"it60_00_112", name:"Magnetic Key [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:60, itemId:"it60_00_113", name:"Override Key [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:61, itemId:"it60_00_114", name:"Override Key", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:62, itemId:"it60_00_115", name:"Distributor & Broken Signal Receiver", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:63, itemId:"it60_00_116", name:"Damaged Detonator", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:64, itemId:"it60_00_117", name:"Distributor & Signal Receiver", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:65, itemId:"it60_00_118", name:"Distributor Relay", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:66, itemId:"it60_00_119", name:"Detonator", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:67, itemId:"it60_00_120", name:"Blood Specimen [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:68, itemId:"it60_00_121", name:"Marie\'s Doll [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  { id:69, itemId:"it60_00_122", name:"Leatherbound Notebook [Grace]", location:"Unknown", type:"key", required:true, icon:"🗝️" },
+  // ── FIREARMS (it10_00_-it10_05_, it11-it13) ──
+  { id:70, itemId:"it10_00_000", name:"it10_00_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:71, itemId:"it10_00_001", name:"it10_00_001", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:72, itemId:"it10_00_002", name:"it10_00_002", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:73, itemId:"it10_00_003", name:"it10_00_003", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:74, itemId:"it10_00_004", name:"it10_00_004", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:75, itemId:"it10_00_005", name:"Ghost Grudge [Leon]", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:76, itemId:"it10_00_006", name:"Aligator Snapper [Leon]", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:77, itemId:"it10_00_007", name:"gun with infinite ammo; kinda bugged when equipped [Leon]", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:78, itemId:"it10_01_000", name:"MSBG 500 [Leon]", location:"Unknown", type:"weapon", required:false, icon:"💥" },
+  { id:79, itemId:"it10_01_002", name:"W870 Police [Leon]", location:"Unknown", type:"weapon", required:false, icon:"💥" },
+  { id:80, itemId:"it10_01_003", name:"990-TAC [Leon]", location:"Unknown", type:"weapon", required:false, icon:"💥" },
+  { id:81, itemId:"it10_02_000", name:"Requiem", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:82, itemId:"it10_03_000", name:"Gal [Leon]", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:83, itemId:"it10_03_001", name:"Stiri REVO3 A1 [Leon]", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:84, itemId:"it10_03_002", name:"submachine gun with infinite ammo [Leon]", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:85, itemId:"it10_03_003", name:"Freya\'s Needle [Grace]", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:86, itemId:"it10_04_000", name:"RPG-7 [Leon]", location:"Unknown", type:"weapon", required:false, icon:"💥" },
+  { id:87, itemId:"it10_05_000", name:"Classic 70 [Leon]", location:"Unknown", type:"weapon", required:false, icon:"🎯" },
+  { id:88, itemId:"it10_05_001", name:"Marksman 1A [Leon]", location:"Unknown", type:"weapon", required:false, icon:"🎯" },
+  { id:89, itemId:"it10_05_002", name:"Clatter Carbine [Leon]", location:"Unknown", type:"weapon", required:false, icon:"🎯" },
+  { id:90, itemId:"it10_10_000", name:"Chainsaw [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:91, itemId:"it10_10_001", name:"Fire Poker", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:92, itemId:"it10_10_002", name:"Disposal Tank", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:93, itemId:"it10_10_003", name:"Red Axe [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:94, itemId:"it10_10_004", name:"Pipe [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:95, itemId:"it10_10_005", name:"Wooden Axe [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:96, itemId:"it10_10_006", name:"Broken Shovel with Chains [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:97, itemId:"it10_10_007", name:"Steel Bar with Concrete [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:98, itemId:"it10_10_008", name:"Spear with Chains [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:99, itemId:"it10_10_009", name:"Steel Bar [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:100, itemId:"it10_10_010", name:"Steel Bar [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:101, itemId:"it10_10_011", name:"Pipe Bar with Nails [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:102, itemId:"it10_20_001", name:"Hatchet [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:103, itemId:"it10_20_003", name:"Makeshift Knife", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:104, itemId:"it10_20_005", name:"Hunting Knife", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:105, itemId:"it10_20_006", name:"Mortal Edge [Leon]", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:106, itemId:"it10_20_007", name:"R.I.P Knife", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:107, itemId:"it10_20_008", name:"Kotetsu", location:"Unknown", type:"melee", required:false, icon:"🔪" },
+  { id:108, itemId:"it11_00_000", name:"it11_00_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:109, itemId:"it11_00_002", name:"it11_00_002", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:110, itemId:"it11_00_006", name:"it11_00_006", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:111, itemId:"it11_01_000", name:"it11_01_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:112, itemId:"it11_01_002", name:"it11_01_002", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:113, itemId:"it11_01_003", name:"it11_01_003", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:114, itemId:"it11_02_000", name:"it11_02_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:115, itemId:"it11_03_000", name:"it11_03_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:116, itemId:"it11_03_001", name:"it11_03_001", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:117, itemId:"it11_05_000", name:"it11_05_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:118, itemId:"it11_05_001", name:"it11_05_001", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:119, itemId:"it11_20_001", name:"it11_20_001", location:"Unknown", type:"weapon", required:false, icon:"🔪" },
+  { id:120, itemId:"it12_00_000", name:"it12_00_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:121, itemId:"it12_00_002", name:"it12_00_002", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:122, itemId:"it12_00_006", name:"it12_00_006", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:123, itemId:"it12_01_000", name:"it12_01_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:124, itemId:"it12_01_002", name:"it12_01_002", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:125, itemId:"it12_01_003", name:"it12_01_003", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:126, itemId:"it12_02_000", name:"it12_02_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:127, itemId:"it12_03_000", name:"it12_03_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:128, itemId:"it12_03_001", name:"it12_03_001", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:129, itemId:"it12_05_000", name:"it12_05_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:130, itemId:"it12_05_001", name:"it12_05_001", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:131, itemId:"it12_20_001", name:"it12_20_001", location:"Unknown", type:"weapon", required:false, icon:"🔪" },
+  { id:132, itemId:"it13_00_000", name:"it13_00_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:133, itemId:"it13_00_002", name:"it13_00_002", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:134, itemId:"it13_00_006", name:"it13_00_006", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:135, itemId:"it13_01_000", name:"it13_01_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:136, itemId:"it13_01_002", name:"it13_01_002", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:137, itemId:"it13_01_003", name:"it13_01_003", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:138, itemId:"it13_02_000", name:"it13_02_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:139, itemId:"it13_03_000", name:"it13_03_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:140, itemId:"it13_03_001", name:"it13_03_001", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:141, itemId:"it13_05_000", name:"it13_05_000", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:142, itemId:"it13_05_001", name:"it13_05_001", location:"Unknown", type:"weapon", required:false, icon:"🔫" },
+  { id:143, itemId:"it13_20_001", name:"it13_20_001", location:"Unknown", type:"weapon", required:false, icon:"🔪" },
+  // ── AMMO & THROWABLES (it40, it20) ──
+  { id:144, itemId:"it20_00_000", name:"Hand Grenade [Leon]", location:"Unknown", type:"ammo", required:false, icon:"💣" },
+  { id:145, itemId:"it20_00_002", name:"Molotov Cocktail", location:"Unknown", type:"ammo", required:false, icon:"💣" },
+  { id:146, itemId:"it20_00_003", name:"Empty Bottle", location:"Unknown", type:"ammo", required:false, icon:"💣" },
+  { id:147, itemId:"it20_00_004", name:"Stacked Hand Grenade [Leon]", location:"Unknown", type:"ammo", required:false, icon:"💣" },
+  { id:148, itemId:"it20_00_005", name:"Bottle of Acid", location:"Unknown", type:"ammo", required:false, icon:"💣" },
+  { id:149, itemId:"it40_00_000", name:"Handgun Ammo", location:"Unknown", type:"ammo", required:false, icon:"🔹" },
+  { id:150, itemId:"it40_01_000", name:"Shotgun Shells [Leon]", location:"Unknown", type:"ammo", required:false, icon:"🔹" },
+  { id:151, itemId:"it40_02_000", name:"12.7x55mm Ammo", location:"Unknown", type:"ammo", required:false, icon:"🔹" },
+  { id:152, itemId:"it40_03_000", name:"Machine Gun Ammo [Leon]", location:"Unknown", type:"ammo", required:false, icon:"🔹" },
+  { id:153, itemId:"it40_05_000", name:"Rifle Ammo [Leon]", location:"Unknown", type:"ammo", required:false, icon:"🔹" },
+  { id:154, itemId:"it40_10_000", name:"it40_10_000", location:"Unknown", type:"ammo", required:false, icon:"🔹" },
+  // ── HEALING / HERBS (it40_20_, it40_30_) ──
+  { id:155, itemId:"it40_20_001", name:"Green Herb [Leon]", location:"Unknown", type:"herb", required:false, icon:"🌿" },
+  { id:156, itemId:"it40_30_000", name:"Green Herb", location:"Unknown", type:"herb", required:false, icon:"🌿" },
+  // ── WEAPON PARTS & CHARMS (it30) ──
+  { id:157, itemId:"it10_30_000", name:"it10_30_000", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:158, itemId:"it10_30_001", name:"it10_30_001", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:159, itemId:"it10_30_002", name:"it10_30_002", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:160, itemId:"it30_00_100", name:"High-Cap Mag [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:161, itemId:"it30_00_101", name:"Silver Tube Extension [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:162, itemId:"it30_00_102", name:"High-Cap Mag [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:163, itemId:"it30_00_103", name:"High-Cap Mag [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:164, itemId:"it30_00_104", name:"Carbon Tube Extension [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:165, itemId:"it30_00_105", name:"High-Cap Mag [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:166, itemId:"it30_00_106", name:"High-Cap Mag [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:167, itemId:"it30_00_107", name:"Titanium Mag Catch [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:168, itemId:"it30_00_108", name:"High-Cap Mag [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:169, itemId:"it30_00_109", name:"Slick Mag Catch [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:170, itemId:"it30_00_200", name:"Burst Stock [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:171, itemId:"it30_00_201", name:"Chrome Stock [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:172, itemId:"it30_00_202", name:"Premier Stock [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:173, itemId:"it30_00_203", name:"Folding Stock [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:174, itemId:"it30_00_204", name:"Stock [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:175, itemId:"it30_00_205", name:"Weighted Grip [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:176, itemId:"it30_00_300", name:"Hair Trigger [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:177, itemId:"it30_00_301", name:"Aluminum Trigger [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:178, itemId:"it30_00_302", name:"Duralumin Bolt [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:179, itemId:"it30_00_303", name:"Duralumin Action Bar [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:180, itemId:"it30_00_304", name:"Duckbill Choke [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:181, itemId:"it30_00_305", name:"Reinforced Bolt [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:182, itemId:"it30_00_306", name:"Titanium Bolt [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:183, itemId:"it30_00_307", name:"Barrel Jacket [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:184, itemId:"it30_00_308", name:"Fortified Blade [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:185, itemId:"it30_00_309", name:"Improved Grip [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:186, itemId:"it30_00_310", name:"Balanced Spring [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:187, itemId:"it30_00_311", name:"Enhanced Leaf Spring [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:188, itemId:"it30_00_400", name:"Standard Scope [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:189, itemId:"it30_00_401", name:"Silver Finish Scope [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:190, itemId:"it30_00_402", name:"Dot Sight [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:191, itemId:"it30_00_403", name:"Dot Sight [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:192, itemId:"it30_00_404", name:"Dot Sight [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:193, itemId:"it30_00_405", name:"Semi-auto Scope [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:194, itemId:"it30_00_406", name:"Dot Sight [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:195, itemId:"it30_00_407", name:"Dot Sight [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:196, itemId:"it30_00_500", name:"Long Compensator [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:197, itemId:"it30_00_501", name:"Chrome Barrel [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:198, itemId:"it30_00_502", name:"PVD Barrel [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:199, itemId:"it30_00_503", name:"Long Flash Guard [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:200, itemId:"it30_00_504", name:"Add-on Suppressor [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:201, itemId:"it30_00_505", name:"Ceramic Coated Barrel [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:202, itemId:"it30_00_506", name:"Ported Barrel [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:203, itemId:"it30_00_507", name:"Compensator [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:204, itemId:"it30_00_700", name:"it30_00_700", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:205, itemId:"it30_00_701", name:"Trusted Companion Charm [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:206, itemId:"it30_00_702", name:"Connoisseur Charm [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:207, itemId:"it30_00_703", name:"Cute Bear Charm [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:208, itemId:"it30_00_704", name:"BSAA Emblem Charm [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:209, itemId:"it30_00_705", name:"S.T.A.R.S. Emblem Charm [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:210, itemId:"it30_00_706", name:"Power Shades Charm [Leon]", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  { id:211, itemId:"it30_00_707", name:"it30_00_707", location:"Unknown", type:"upgrade", required:false, icon:"🔧" },
+  // ── CRAFTING MATERIALS (it50) ──
+  { id:212, itemId:"it50_00_001", name:"Empty Slot", location:"Unknown", type:"crafting", required:false, icon:"⚙️" },
+  { id:213, itemId:"it50_00_002", name:"Scrap", location:"Unknown", type:"crafting", required:false, icon:"⚙️" },
+  { id:214, itemId:"it50_00_006", name:"Rare Metal", location:"Unknown", type:"crafting", required:false, icon:"⚙️" },
+  { id:215, itemId:"it50_00_012", name:"Ink Ribbon Tin", location:"Unknown", type:"crafting", required:false, icon:"⚙️" },
+  { id:216, itemId:"it50_00_014", name:"Gunpowder [Leon]", location:"Unknown", type:"crafting", required:false, icon:"⚙️" },
+  { id:217, itemId:"it50_00_015", name:"Empty Slot", location:"Unknown", type:"crafting", required:false, icon:"⚙️" },
+  { id:218, itemId:"it50_00_017", name:"Empty Ink Ribbon", location:"Unknown", type:"crafting", required:false, icon:"⚙️" },
+  { id:219, itemId:"it50_00_018", name:"Empty Injector", location:"Unknown", type:"crafting", required:false, icon:"⚙️" },
+  // ── MISC ITEMS (it99, it70, it00) ──
+  { id:220, itemId:"it00_00_000", name:"it00_00_000", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:221, itemId:"it00_00_100", name:"it00_00_100", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:222, itemId:"it00_00_200", name:"it00_00_200", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:223, itemId:"it00_01_000", name:"Med Injector", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:224, itemId:"it70_01_000", name:"it70_01_000", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:225, itemId:"it70_03_000", name:"it70_03_000", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:226, itemId:"it70_04_000", name:"it70_04_000", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:227, itemId:"it99_00_001", name:"it99_00_001", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:228, itemId:"it99_00_002", name:"it99_00_002", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:229, itemId:"it99_00_004", name:"it99_00_004", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:230, itemId:"it99_00_006", name:"it99_00_006", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:231, itemId:"it99_00_007", name:"it99_00_007", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:232, itemId:"it99_00_008", name:"it99_00_008", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:233, itemId:"it99_00_009", name:"it99_00_009", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:234, itemId:"it99_00_010", name:"it99_00_010", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:235, itemId:"it99_01_000", name:"Attaché Case Expansion", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:236, itemId:"it99_01_001", name:"Attaché Case Expansion", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:237, itemId:"it99_02_001", name:"it99_02_001", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:238, itemId:"it99_02_002", name:"Steroids [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:239, itemId:"it99_02_003", name:"it99_02_003", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:240, itemId:"it99_02_004", name:"Stabilizer [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:241, itemId:"it99_02_005", name:"it99_02_005", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:242, itemId:"it99_05_000", name:"it99_05_000", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:243, itemId:"it99_05_001", name:"it99_05_001", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:244, itemId:"it99_05_002", name:"it99_05_002", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:245, itemId:"it99_06_000", name:"Blood Collector 0/100 [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:246, itemId:"it99_06_001", name:"it99_06_001", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:247, itemId:"it99_06_003", name:"Blood Collector 0/150 [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:248, itemId:"it99_06_004", name:"Transfusion Bag [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:249, itemId:"it99_06_005", name:"it99_06_005", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:250, itemId:"it99_06_006", name:"it99_06_006", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:251, itemId:"it99_06_007", name:"it99_06_007", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:252, itemId:"it99_06_008", name:"it99_06_008", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:253, itemId:"it99_06_009", name:"it99_06_009", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:254, itemId:"it99_06_010", name:"Blood Collector 0/200 [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:255, itemId:"it99_07_000", name:"it99_07_000", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:256, itemId:"it99_07_001", name:"Stakeout Takeout Charm [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:257, itemId:"it99_07_002", name:"Rugged Rookie Charm [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:258, itemId:"it99_07_003", name:"Eye Spy Charm [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:259, itemId:"it99_50_001", name:"Hemolytic Injector [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:260, itemId:"it99_50_003", name:"Ink Ribbon [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:261, itemId:"it99_50_005", name:"Antique Coin [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:262, itemId:"it99_50_006", name:"Lockpick [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:263, itemId:"it99_50_007", name:"Tactical Tracker", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:264, itemId:"it99_50_008", name:"Tracking Module", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:265, itemId:"it99_50_009", name:"Tactical Tracker", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:266, itemId:"it99_50_010", name:"Infinite Ribbon [Grace]", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:267, itemId:"it99_50_011", name:"it99_50_011", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:268, itemId:"it99_50_012", name:"it99_50_012", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  { id:269, itemId:"it99_50_013", name:"it99_50_013", location:"Unknown", type:"misc", required:false, icon:"📦" },
+  // ── KEY ITEMS (it60_99_) ── progression items
+  // ── DEBUG SLOTS (it10_99_, etc.) ── excluded by default
+  { id:270, itemId:"it10_99_000", name:"it10_99_000", location:"Unknown", type:"debug", required:false, icon:"⚠️" },
+  { id:271, itemId:"it10_99_001", name:"it10_99_001", location:"Unknown", type:"debug", required:false, icon:"⚠️" },
+  { id:272, itemId:"it10_99_002", name:"it10_99_002", location:"Unknown", type:"debug", required:false, icon:"⚠️" },
+  { id:273, itemId:"it10_99_003", name:"it10_99_003", location:"Unknown", type:"debug", required:false, icon:"⚠️" },
+  { id:274, itemId:"it10_99_004", name:"it10_99_004", location:"Unknown", type:"debug", required:false, icon:"⚠️" },
+  { id:275, itemId:"it60_99_000", name:"it60_99_000", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:276, itemId:"it60_99_001", name:"it60_99_001", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:277, itemId:"it60_99_002", name:"it60_99_002", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:278, itemId:"it60_99_003", name:"it60_99_003", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:279, itemId:"it60_99_004", name:"it60_99_004", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:280, itemId:"it60_99_005", name:"it60_99_005", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:281, itemId:"it60_99_006", name:"it60_99_006", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:282, itemId:"it60_99_007", name:"it60_99_007", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:283, itemId:"it60_99_008", name:"it60_99_008", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:284, itemId:"it60_99_009", name:"it60_99_009", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:285, itemId:"it60_99_010", name:"it60_99_010", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:286, itemId:"it60_99_011", name:"it60_99_011", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:287, itemId:"it60_99_012", name:"it60_99_012", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:288, itemId:"it60_99_013", name:"it60_99_013", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:289, itemId:"it60_99_014", name:"it60_99_014", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:290, itemId:"it60_99_015", name:"it60_99_015", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:291, itemId:"it60_99_016", name:"it60_99_016", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:292, itemId:"it60_99_017", name:"it60_99_017", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:293, itemId:"it60_99_018", name:"it60_99_018", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:294, itemId:"it60_99_019", name:"it60_99_019", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:295, itemId:"it60_99_020", name:"it60_99_020", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:296, itemId:"it60_99_021", name:"it60_99_021", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:297, itemId:"it60_99_022", name:"it60_99_022", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:298, itemId:"it60_99_023", name:"it60_99_023", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:299, itemId:"it60_99_024", name:"it60_99_024", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:300, itemId:"it60_99_025", name:"it60_99_025", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:301, itemId:"it60_99_026", name:"it60_99_026", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:302, itemId:"it60_99_027", name:"it60_99_027", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:303, itemId:"it60_99_028", name:"it60_99_028", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:304, itemId:"it60_99_029", name:"it60_99_029", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:305, itemId:"it60_99_030", name:"it60_99_030", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:306, itemId:"it60_99_031", name:"it60_99_031", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:307, itemId:"it60_99_032", name:"it60_99_032", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:308, itemId:"it60_99_033", name:"it60_99_033", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:309, itemId:"it60_99_034", name:"it60_99_034", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:310, itemId:"it60_99_035", name:"it60_99_035", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:311, itemId:"it60_99_036", name:"it60_99_036", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:312, itemId:"it60_99_037", name:"it60_99_037", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:313, itemId:"it60_99_038", name:"it60_99_038", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:314, itemId:"it60_99_039", name:"it60_99_039", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:315, itemId:"it60_99_040", name:"it60_99_040", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:316, itemId:"it60_99_041", name:"it60_99_041", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:317, itemId:"it60_99_042", name:"it60_99_042", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:318, itemId:"it60_99_043", name:"it60_99_043", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:319, itemId:"it60_99_044", name:"it60_99_044", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:320, itemId:"it60_99_045", name:"it60_99_045", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:321, itemId:"it60_99_046", name:"it60_99_046", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:322, itemId:"it60_99_047", name:"it60_99_047", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:323, itemId:"it60_99_048", name:"it60_99_048", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+  { id:324, itemId:"it60_99_049", name:"it60_99_049", location:"Unknown", type:"key", required:true, icon:"⚠️" },
+];
+
+let nextId = 1000;
+let currentSeed = '';
+
+// ─── SEEDED RNG ───────────────────────────────────────────────────────────────
+function hashStr(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h;
+}
+
+function makeRNG(seed) {
+  let s = hashStr(String(seed));
+  return function() {
+    s ^= s << 13;
+    s ^= s >> 17;
+    s ^= s << 5;
+    s = s >>> 0;
+    return s / 0xffffffff;
+  };
+}
+
+function seededShuffle(arr, rng) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ─── GENERATE SEED ───────────────────────────────────────────────────────────
+function generateRandomSeed() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let seed = '';
+  for (let i = 0; i < 8; i++) seed += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('seedInput').value = seed;
+}
+
+// ─── RANDOMISE ───────────────────────────────────────────────────────────────
+function randomise() {
+  const seedInput = document.getElementById('seedInput').value.trim();
+  const runNum = parseInt(document.getElementById('runNumber').value) || 1;
+  currentSeed = seedInput || Math.random().toString(36).substr(2, 8).toUpperCase();
+  document.getElementById('seedInput').value = currentSeed;
+
+  const combinedSeed = currentSeed + '_run' + runNum;
+  const rng = makeRNG(combinedSeed);
+
+  const opts = {
+    weapons:           document.getElementById('opt_weapons').checked,
+    melee:             document.getElementById('opt_melee').checked,
+    ammo:              document.getElementById('opt_ammo').checked,
+    herbs:             document.getElementById('opt_herbs').checked,
+    keys:              document.getElementById('opt_keys').checked,
+    upgrades:          document.getElementById('opt_upgrades').checked,
+    crafting:          document.getElementById('opt_crafting').checked,
+    treasure:          document.getElementById('opt_treasure').checked,
+    misc:              document.getElementById('opt_misc').checked,
+    debug:             document.getElementById('opt_debug').checked,
+    keyProtect:        document.getElementById('opt_keyProtect').checked,
+    guaranteeRequired: document.getElementById('opt_guaranteeRequired').checked,
+    locationShuffle:   document.getElementById('opt_locationShuffle').checked,
+    dupes:             document.getElementById('opt_dupes').checked,
+    qty:               document.getElementById('opt_qty').checked,
+    traps:             document.getElementById('opt_traps').checked,
+  };
+
+  // Warn if softlock protection is disabled
+  const warn = document.getElementById('softlockWarning');
+  warn.classList.toggle('visible', !opts.keyProtect && !opts.guaranteeRequired);
+
+  // Build filtered pool
+  const typeMap = { key:'keys', weapon:'weapons', melee:'melee', ammo:'ammo', herb:'herbs', upgrade:'upgrades', crafting:'crafting', treasure:'treasure', misc:'misc', debug:'debug' };
+  let pool = itemPool.filter(item => opts[typeMap[item.type]] !== false);
+
+  // Separate required vs optional
+  const required = pool.filter(i => i.required);
+  let optional = pool.filter(i => !i.required);
+
+  let shuffled;
+
+  if (opts.locationShuffle) {
+    // Shuffle only the locations, keep item names in place
+    const locations = seededShuffle(pool.map(i => i.location), rng);
+    shuffled = pool.map((item, idx) => ({ ...item, location: locations[idx] }));
+  } else if (opts.keyProtect && opts.guaranteeRequired) {
+    // Required items shuffled only among themselves
+    const shuffledRequired = seededShuffle(required, rng).map((item, idx) => ({
+      ...item,
+      location: required[idx]?.location || item.location
+    }));
+    const shuffledOptional = seededShuffle(optional, rng);
+    if (!opts.dupes) {
+      shuffled = [...shuffledRequired, ...shuffledOptional];
+    } else {
+      // Fill with duplicates from optional pool
+      const extras = Array.from({ length: Math.floor(optional.length * 0.3) }, () => {
+        return { ...optional[Math.floor(rng() * optional.length)], id: nextId++ };
+      });
+      shuffled = [...shuffledRequired, ...seededShuffle([...shuffledOptional, ...extras], rng)];
+    }
+  } else {
+    // Full chaos shuffle (softlock risk!)
+    shuffled = seededShuffle(pool, rng);
+  }
+
+  // Randomise quantities if enabled
+  if (opts.qty) {
+    shuffled = shuffled.map(item => {
+      if (item.type === 'ammo') {
+        const qtys = [6, 12, 18, 24, 30];
+        const qty = qtys[Math.floor(rng() * qtys.length)];
+        return { ...item, name: item.name.replace(/×\d+/, `×${qty}`) };
+      }
+      return item;
+    });
+  }
+
+  // Trap items
+  if (opts.traps && rng() > 0.6) {
+    const traps = [
+      { name: "Rotten Egg", type: "misc", icon: "🥚", location: "???" },
+      { name: "Empty Box",  type: "misc", icon: "📦", location: "???" },
+      { name: "Old Painting (worthless)", type: "misc", icon: "🖼️", location: "???" },
+    ];
+    const trap = traps[Math.floor(rng() * traps.length)];
+    const insertAt = Math.floor(rng() * shuffled.length);
+    shuffled.splice(insertAt, 0, { ...trap, id: nextId++, required: false });
+  }
+
+  // Store for export
+  window._lastRandomisation = {
+    seed: currentSeed,
+    run: runNum,
+    generated: new Date().toISOString(),
+    opts: opts,
+    items: shuffled,
+    // Build substitution map: originalItemId → replacementItemId
+    // Pairs original pool order with shuffled result
+    substitutions: buildSubstitutionMap(pool, shuffled),
+  };
+
+  renderResults(shuffled, combinedSeed);
+}
+
+function exportSeed() {
+  const data = window._lastRandomisation;
+  if (!data) { alert('Generate a randomisation first.'); return; }
+
+  const payload = {
+    seed: data.seed,
+    run: data.run,
+    generated: data.generated,
+    item_count: data.items.length,
+    substitutions: data.substitutions,
+    // Full ordered list for reference
+    item_order: data.items.map(i => ({
+      itemId:   i.itemId   || null,
+      name:     i.name,
+      type:     i.type,
+      required: i.required,
+    })),
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `re9_randomiser_seed_${data.seed}_r${data.run}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildSubstitutionMap(originalPool, shuffledPool) {
+  // Map: what item the game normally gives → what to give instead
+  // Keys = original item IDs in pool order, values = shuffled replacements
+  const map = {};
+  const origWithId = originalPool.filter(i => i.itemId);
+  const shuffWithId = shuffledPool.filter(i => i.itemId);
+  const len = Math.min(origWithId.length, shuffWithId.length);
+  for (let i = 0; i < len; i++) {
+    const orig = origWithId[i].itemId;
+    const repl = shuffWithId[i].itemId;
+    if (orig && repl && orig !== repl) {
+      map[orig] = repl;
+    }
+  }
+  return map;
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderResults(items, seed) {
+  const counts = { key:0, weapon:0, melee:0, ammo:0, herb:0, upgrade:0, crafting:0, treasure:0, misc:0, debug:0 };
+  items.forEach(i => { if (counts[i.type] !== undefined) counts[i.type]++; });
+
+  const bar = document.getElementById('resultsArea');
+  bar.innerHTML = `
+    <div class="results-header">
+      <h2>RANDOMISED ITEM LIST</h2>
+      <div style="display:flex;gap:0.75rem;align-items:center">
+        <div class="seed-display">SEED: <span>${seed}</span></div>
+        <button class="btn-secondary" onclick="exportSeed()" style="font-size:0.7rem;padding:0.5rem 1rem">⬇ EXPORT FOR MOD</button>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="stats-bar">
+      <div class="stat"><span>${items.length}</span>TOTAL ITEMS</div>
+      <div class="stat"><span>${counts.key}</span>KEY ITEMS</div>
+      <div class="stat"><span>${counts.weapon}</span>FIREARMS</div>
+      <div class="stat"><span>${counts.melee}</span>MELEE</div>
+      <div class="stat"><span>${counts.ammo}</span>AMMO</div>
+      <div class="stat"><span>${counts.herb}</span>HEALING</div>
+      <div class="stat"><span>${counts.upgrade}</span>UPGRADES</div>
+      <div class="stat"><span>${counts.crafting}</span>CRAFTING</div>
+      <div class="stat"><span>${counts.treasure}</span>TREASURE</div>
+      <div class="stat"><span>${counts.misc}</span>MISC</div>
+    </div>
+    <div class="items-grid" id="itemsGrid"></div>
+  `;
+
+  // Animate progress bar
+  requestAnimationFrame(() => {
+    const fill = document.getElementById('progressFill');
+    if (fill) { fill.style.width = '100%'; }
+  });
+
+  const grid = document.getElementById('itemsGrid');
+  items.forEach((item, i) => {
+    const typeClass = `type-${item.type}`;
+    const requiredBadge = item.required ? `<span class="required-badge">REQ'D</span>` : '';
+    const card = document.createElement('div');
+    card.className = 'item-card';
+    card.style.animationDelay = `${i * 20}ms`;
+    card.innerHTML = `
+      <div class="item-icon">${item.icon || '📦'}</div>
+      <div class="item-info">
+        <div class="item-name">${item.name}</div>
+        <div class="item-location">${item.location}</div>
+        ${item.itemId && item.itemId !== item.name ? `<div class="item-code" style="font-family:var(--mono);font-size:0.6rem;color:#444;margin-top:2px">${item.itemId}</div>` : ''}
+      </div>
+      ${requiredBadge}
+      <div class="item-type ${typeClass}">${item.type}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ─── ITEM TABLE ───────────────────────────────────────────────────────────────
+function renderItemTable() {
+  const tbody = document.getElementById('itemTableBody');
+  tbody.innerHTML = '';
+  const typeLabels = { key:'Key Item', weapon:'Firearm', melee:'Melee', ammo:'Ammo', herb:'Herb/Heal', upgrade:'Weapon Part', crafting:'Crafting Mat', treasure:'Treasure', misc:'Misc', debug:'Debug Slot' };
+  itemPool.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${item.name}" onchange="updateItem(${item.id},'name',this.value)"></td>
+      <td><input type="text" value="${item.location}" onchange="updateItem(${item.id},'location',this.value)"></td>
+      <td>
+        <select onchange="updateItem(${item.id},'type',this.value)">
+          ${Object.entries(typeLabels).map(([v,l]) => `<option value="${v}" ${item.type===v?'selected':''}>${l}</option>`).join('')}
+        </select>
+      </td>
+      <td style="text-align:center">
+        <label class="toggle" style="margin:auto"><input type="checkbox" ${item.required?'checked':''} onchange="updateItem(${item.id},'required',this.checked)"><span class="toggle-slider"></span></label>
+      </td>
+      <td><button class="btn-danger" onclick="removeItem(${item.id})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateItem(id, field, val) {
+  const item = itemPool.find(i => i.id === id);
+  if (item) item[field] = val;
+}
+
+function removeItem(id) {
+  itemPool = itemPool.filter(i => i.id !== id);
+  renderItemTable();
+}
+
+function addItem() {
+  const name = document.getElementById('newItemName').value.trim();
+  const loc  = document.getElementById('newItemLocation').value.trim();
+  const type = document.getElementById('newItemType').value;
+  const req  = document.getElementById('newItemRequired').value === 'true';
+  if (!name) return;
+  const icons = { key:'🗝️', weapon:'🔫', ammo:'🔹', herb:'🌿', upgrade:'⬆️', misc:'💎' };
+  itemPool.push({ id: nextId++, name, location: loc || 'Unknown', type, required: req, icon: icons[type] || '📦' });
+  document.getElementById('newItemName').value = '';
+  document.getElementById('newItemLocation').value = '';
+  renderItemTable();
+}
+
+function toggleEditor() {
+  const body = document.getElementById('editorBody');
+  const icon = document.getElementById('editorToggleIcon');
+  const open = body.classList.toggle('open');
+  icon.textContent = open ? '▲ COLLAPSE' : '▼ EXPAND';
+  if (open) renderItemTable();
+}
+
+// ─── CLOCK ────────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleTimeString('en-GB', { hour12: false });
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+</body>
+</html>

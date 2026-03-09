@@ -1,0 +1,48 @@
+{
+  "name": "re9-item-randomiser",
+  "version": "1.0.0",
+  "description": "Item randomiser for Resident Evil 9: Requiem",
+  "author": "RE9 Randomiser",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "build-all": "electron-builder --win --x64 --arm64"
+  },
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.re9randomiser.app",
+    "productName": "RE9 Item Randomiser",
+    "copyright": "Public Domain",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis",     "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.ico",
+      "sign": null,
+      "signingHashAlgorithms": null,
+      "forceCodeSigning": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "RE9 Item Randomiser"
+    },
+    "portable": {
+      "artifactName": "RE9-Randomiser-Portable.exe"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*"
+    ]
+  }
+}
