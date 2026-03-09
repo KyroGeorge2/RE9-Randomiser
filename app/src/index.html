@@ -1689,9 +1689,8 @@ async function leaveLobby() {
 }
 
 async function getStatsPath() {
-  if (typeof currentGamePath !== 'undefined' && currentGamePath) {
-    return await window.electronAPI?.getStatsPath?.({ gamePath: currentGamePath }) || null
-  }
+  const gp = window._gamePath
+  if (gp) return await window.electronAPI?.getStatsPath?.({ gamePath: gp }) || null
   return null
 }
 
