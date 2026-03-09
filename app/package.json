@@ -26,8 +26,6 @@
         { "target": "portable", "arch": ["x64"] }
       ],
       "icon": "assets/icon.ico",
-      "sign": null,
-      "signingHashAlgorithms": null,
       "forceCodeSigning": false
     },
     "nsis": {
