@@ -151,7 +151,21 @@ ipcMain.handle('install-lua-mod', async (event, { gamePath }) => {
   }
 })
 
-// ── IPC: open folder in explorer ─────────────────────────────
+// ── IPC: read a file ──────────────────────────────────────────
+ipcMain.handle('read-file', async (event, { filePath }) => {
+  try {
+    if (!fs.existsSync(filePath)) return null
+    return fs.readFileSync(filePath, 'utf8')
+  } catch (err) {
+    return null
+  }
+})
+
+// ── IPC: get stats file path ──────────────────────────────────
+ipcMain.handle('get-stats-path', async (event, { gamePath }) => {
+  return path.join(gamePath, 'reframework', 'data', 're9_randomiser', 'stats.json')
+})
+
 ipcMain.handle('open-folder', async (event, { folderPath }) => {
   shell.openPath(folderPath)
   return true

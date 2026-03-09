@@ -27,9 +27,6 @@ local item_default_qty = {
     ["it40_02_000"] = 4,   -- 12.7x55 Ammo
     ["it40_03_000"] = 20,  -- Machine Gun Ammo
     ["it40_05_000"] = 5,   -- Rifle Ammo
-    ["it40_20_000"] = 1,   -- Green herb
-    ["it40_20_001"] = 1,   -- Green herb variant
-    ["it40_30_000"] = 1,   -- Green herb small
     ["it50_00_002"] = 3,   -- Scrap
     ["it50_00_006"] = 2,   -- Rare Metal
     ["it50_00_014"] = 2,   -- Gunpowder (Large)
@@ -52,7 +49,7 @@ local safe_consumables = {
     ["it20_00_003"]=true, ["it20_00_004"]=true, ["it20_00_005"]=true,
     ["it40_00_000"]=true, ["it40_01_000"]=true, ["it40_02_000"]=true,
     ["it40_03_000"]=true, ["it40_05_000"]=true,
-    ["it40_20_000"]=true, ["it40_20_001"]=true, ["it40_30_000"]=true,
+    -- it40_20_000, it40_20_001, it40_30_000 removed — no description, Leon-only ghosts
     ["it50_00_002"]=true, ["it50_00_006"]=true,
     ["it50_00_014"]=true, ["it50_00_018"]=true,
 }
@@ -80,16 +77,37 @@ end
 -- Items that are NEVER randomized when picked up (but can still appear as replacements)
 local function is_protected_original(id_str)
     if not id_str then return true end
-    if id_str:match("^it60_") then return true end  -- all key items — never swap originals
-    if id_str:match("^it10_10_") then return true end  -- story melee weapons
+    if id_str:match("^it60_") then return true end   -- all key items — never swap originals
+    if id_str:match("^it10_10_") then return true end -- story melee weapons
+    if id_str == "it10_02_000" then return true end    -- Requiem pistol (starting weapon / segment grant)
+    if id_str == "it99_05_001" then return true end    -- Flashlight (segment grant)
+    if id_str:match("^it99_06_") then return true end  -- Blood collectors (Grace mechanic, never swap)
+    if id_str:match("^it70_") then return true end    -- weapon parts/attachments — never swap originals
     return false
 end
 
 -- Items that are NEVER given as replacements
 local function is_blacklisted(id_str)
     if not id_str then return true end
-    if id_str:match("^it60_99_") then return true end  -- ghost/placeholder items
-    if id_str:match("^it10_10_") then return true end  -- story melee weapons
+    if id_str:match("^it60_99_") then return true end   -- ghost/placeholder key items
+    if id_str:match("^it10_10_") then return true end   -- story melee weapons
+    -- ghost herbs — no description, broken
+    if id_str == "it40_20_000" or id_str == "it40_20_001" or id_str == "it40_30_000" then return true end
+    -- it99_02_: steroids/stabilizer/unknowns — Grace-only permanent upgrades, don't randomise
+    if id_str:match("^it99_02_") then return true end
+    -- it99_05_: unknown
+    if id_str:match("^it99_05_") then return true end
+    -- it99_06_: blood collectors and devices — some freeze the game
+    if id_str:match("^it99_06_") then return true end
+    -- it99_07_: charms — Grace-only, risky
+    if id_str:match("^it99_07_") then return true end
+    -- it99_50_: keep only known-safe ones (trackers already in safe pool)
+    -- blacklist unknowns and rejected items
+    local it99_50_blacklist = {
+        ["it99_50_000"]=true, ["it99_50_004"]=true,
+        ["it99_50_011"]=true, ["it99_50_012"]=true, ["it99_50_013"]=true,
+    }
+    if it99_50_blacklist[id_str] then return true end
     return false
 end
 local frame_count = 0
@@ -409,6 +427,63 @@ re.on_frame(function()
         swap_count, swap.orig_id_str, swap.repl.name, swap.count))
 end)
 
+
+-- ============================================================
+--  Race Mode — death tracking + stats.json writer
+-- ============================================================
+local STATS_PATH        = "re9_randomiser/stats.json"
+local race_deaths       = 0
+local race_start        = nil
+local last_stats_write  = 0
+local last_gameover_count = -1  -- poll-based death detection
+
+local function get_race_time()
+    if not race_start then return 0 end
+    return os.clock() - race_start
+end
+
+local function write_stats()
+    local t = os.clock()
+    if t - last_stats_write < 3 then return end
+    last_stats_write = t
+    local ok, err = pcall(function()
+        json.dump_file(STATS_PATH, { deaths = race_deaths, time = math.floor(get_race_time()) })
+    end)
+    if not ok then log.info(MOD .. " write_stats error: " .. tostring(err)) end
+end
+
+-- Hook requestGameOver — should only fire on actual player death
+local last_death_frame = -9999
+local DEATH_DEBOUNCE_FRAMES = 300
+
+local _hooked_death = pcall(function()
+    sdk.hook(
+        sdk.find_type_definition("app.GameOverManager"):get_method("requestGameOver"),
+        function(args)
+            if frame_count - last_death_frame < DEATH_DEBOUNCE_FRAMES then return end
+            last_death_frame = frame_count
+            race_deaths = race_deaths + 1
+            log.info(MOD .. " Death #" .. race_deaths .. " recorded (requestGameOver, frame " .. frame_count .. ")")
+            write_stats()
+        end,
+        function(retval) return retval end
+    )
+end)
+if _hooked_death then
+    log.info(MOD .. " Death hook: requestGameOver installed")
+else
+    log.info(MOD .. " Death hook: requestGameOver FAILED")
+end
+
+re.on_frame(function()
+    if swap_count > 0 and race_start == nil then
+        race_start = os.clock()
+        log.info(MOD .. " Race timer started")
+    end
+    if race_start then write_stats() end
+end)
+
+
 re.on_draw_ui(function()
     if not imgui.tree_node("RE9 Item Randomiser") then return end
 
@@ -423,9 +498,14 @@ re.on_draw_ui(function()
     end
 
     imgui.text("Hook: " .. (hook_installed and "mergeOrAdd ✓" or "NOT installed ✗"))
+    imgui.separator()
+    imgui.text_colored("Race stats:", 0xffffaa00)
+    imgui.text("  Deaths: " .. tostring(race_deaths))
+    imgui.text("  Time:   " .. string.format("%.1fs", get_race_time()))
+    imgui.text("  Timer:  " .. (race_start and "running" or "not started"))
 
     if imgui.button("Reload seed.json") then
-        seed_data = nil; substitutions = {}; swap_count = 0; swap_log = {}; reroll_pool = {}; given_items = {}; given_keys = {}
+        seed_data = nil; substitutions = {}; swap_count = 0; swap_log = {}; reroll_pool = {}; given_items = {}; given_keys = {}; race_deaths = 0; race_start = nil
         if not next(id_by_name) then pcall(build_item_id_map) end
         pcall(load_seed)
     end

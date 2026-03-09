@@ -507,8 +507,14 @@
   </div>
 </header>
 
+<nav style="display:flex; gap:0; border-bottom:2px solid var(--blood); background:#0d0d0d;">
+  <button onclick="switchTab('randomiser')" id="tab-randomiser" style="font-family:var(--mono);font-size:0.75rem;letter-spacing:2px;padding:0.8rem 2rem;background:var(--blood);color:#fff;border:none;border-bottom:2px solid var(--red);cursor:pointer;">◈ RANDOMISER</button>
+  <button onclick="switchTab('race')" id="tab-race" style="font-family:var(--mono);font-size:0.75rem;letter-spacing:2px;padding:0.8rem 2rem;background:transparent;color:var(--muted);border:none;border-bottom:2px solid transparent;cursor:pointer;">⚡ RACE MODE</button>
+</nav>
+
 <main>
 
+<div id="page-randomiser">
   <!-- ── Electron game-path panel ─────────────────────────────── -->
   <div id="electronPanel" style="display:none; background:#0d1a0d; border:1px solid #1a4a1a; border-radius:4px; padding:1rem 1.5rem; margin-bottom:1.2rem; font-family:var(--mono); font-size:0.75rem;">
     <div style="color:#4caf50; font-size:0.8rem; margin-bottom:0.8rem; letter-spacing:2px;">◈ GAME INSTALLATION</div>
@@ -643,6 +649,87 @@
       </div>
     </div>
   </div>
+
+</div><!-- #page-randomiser -->
+
+<!-- ── RACE MODE TAB ─────────────────────────────────────────── -->
+<div id="page-race" style="display:none; padding:1.5rem 2rem; max-width:900px; margin:0 auto;">
+
+  <div style="font-family:var(--mono); color:var(--red-bright); font-size:0.7rem; letter-spacing:3px; margin-bottom:1.5rem;">⚡ RACE MODE — COMPETE WITH FRIENDS IN REAL TIME</div>
+
+  <!-- Create / Join -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+
+    <div style="background:var(--panel); border:1px solid var(--border); padding:1.5rem;">
+      <div style="font-family:var(--mono); color:var(--red-bright); font-size:0.7rem; letter-spacing:2px; margin-bottom:1rem;">◈ CREATE LOBBY</div>
+      <div style="margin-bottom:0.8rem;">
+        <label style="font-family:var(--mono); font-size:0.7rem; color:var(--muted); display:block; margin-bottom:0.4rem;">YOUR NAME</label>
+        <input type="text" id="racePlayerName" placeholder="e.g. KyroGeorge" maxlength="16"
+          style="width:100%; background:var(--dark); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:0.8rem; padding:0.5rem 0.8rem;">
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label style="font-family:var(--mono); font-size:0.7rem; color:var(--muted); display:block; margin-bottom:0.4rem;">SEED (from randomiser tab)</label>
+        <input type="text" id="raceSeedInput" placeholder="e.g. RACCOON7" maxlength="20"
+          style="width:100%; background:var(--dark); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:0.8rem; padding:0.5rem 0.8rem;">
+      </div>
+      <button onclick="createLobby()" class="btn-primary" style="width:100%;">CREATE LOBBY</button>
+    </div>
+
+    <div style="background:var(--panel); border:1px solid var(--border); padding:1.5rem;">
+      <div style="font-family:var(--mono); color:var(--red-bright); font-size:0.7rem; letter-spacing:2px; margin-bottom:1rem;">◈ JOIN LOBBY</div>
+      <div style="margin-bottom:0.8rem;">
+        <label style="font-family:var(--mono); font-size:0.7rem; color:var(--muted); display:block; margin-bottom:0.4rem;">YOUR NAME</label>
+        <input type="text" id="joinPlayerName" placeholder="e.g. Player2" maxlength="16"
+          style="width:100%; background:var(--dark); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:0.8rem; padding:0.5rem 0.8rem;">
+      </div>
+      <div style="margin-bottom:1rem;">
+        <label style="font-family:var(--mono); font-size:0.7rem; color:var(--muted); display:block; margin-bottom:0.4rem;">LOBBY CODE</label>
+        <input type="text" id="joinCodeInput" placeholder="e.g. RACCOON" maxlength="8"
+          style="width:100%; background:var(--dark); border:1px solid var(--border); color:var(--text); font-family:var(--mono); font-size:0.9rem; padding:0.5rem 0.8rem; text-transform:uppercase; letter-spacing:3px;"
+          oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <button onclick="joinLobby()" class="btn-secondary" style="width:100%;">JOIN LOBBY</button>
+    </div>
+  </div>
+
+  <!-- Active Lobby Panel (hidden until in lobby) -->
+  <div id="raceLobbyPanel" style="display:none;">
+
+    <div style="background:var(--panel); border:1px solid var(--blood); padding:1.5rem; margin-bottom:1.5rem;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.8rem;">
+        <div>
+          <span style="font-family:var(--mono); color:var(--muted); font-size:0.7rem;">LOBBY CODE</span><br>
+          <span id="displayLobbyCode" style="font-family:var(--mono); font-size:2rem; color:var(--red-bright); letter-spacing:6px;">------</span>
+        </div>
+        <div>
+          <span style="font-family:var(--mono); color:var(--muted); font-size:0.7rem;">SEED</span><br>
+          <span id="displayLobbySeed" style="font-family:var(--mono); font-size:1.2rem; color:#fff; letter-spacing:3px;">------</span>
+        </div>
+        <div>
+          <span style="font-family:var(--mono); color:var(--muted); font-size:0.7rem;">STATUS</span><br>
+          <span id="displayLobbyStatus" style="font-family:var(--mono); font-size:0.9rem; color:var(--amber);">WAITING</span>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button onclick="copyLobbyCode()" class="btn-secondary" style="font-size:0.7rem; padding:0.4rem 0.8rem;">📋 COPY CODE</button>
+          <button onclick="startRace()" id="btnStartRace" class="btn-primary" style="font-size:0.7rem; padding:0.4rem 0.8rem; display:none;">▶ START RACE</button>
+          <button onclick="leaveLobby()" class="btn-secondary" style="font-size:0.7rem; padding:0.4rem 0.8rem; border-color:var(--blood); color:var(--blood);">✕ LEAVE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Players leaderboard -->
+    <div style="background:var(--panel); border:1px solid var(--border);">
+      <div style="padding:1rem 1.5rem; border-bottom:1px solid var(--border); font-family:var(--mono); font-size:0.7rem; letter-spacing:2px; color:var(--red-bright);">◈ RACERS</div>
+      <div id="racersList" style="padding:0.5rem;"></div>
+    </div>
+
+    <div style="font-family:var(--mono); font-size:0.65rem; color:var(--muted); margin-top:1rem; text-align:center;">
+      Stats sync every 5 seconds from your local game file · Deaths tracked via REFramework hook
+    </div>
+  </div>
+
+  <div id="raceStatus" style="font-family:var(--mono); font-size:0.75rem; color:var(--muted); margin-top:1rem; text-align:center;"></div>
+</div>
 
 </main>
 
@@ -1386,7 +1473,228 @@ function toggleEditor() {
   if (open) renderItemTable();
 }
 
-// ─── CLOCK ────────────────────────────────────────────────────────────────────
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('page-randomiser').style.display = tab === 'randomiser' ? '' : 'none'
+  document.getElementById('page-race').style.display       = tab === 'race'       ? '' : 'none'
+  document.getElementById('tab-randomiser').style.background    = tab === 'randomiser' ? 'var(--blood)' : 'transparent'
+  document.getElementById('tab-randomiser').style.color         = tab === 'randomiser' ? '#fff' : 'var(--muted)'
+  document.getElementById('tab-randomiser').style.borderBottomColor = tab === 'randomiser' ? 'var(--red)' : 'transparent'
+  document.getElementById('tab-race').style.background    = tab === 'race' ? 'var(--blood)' : 'transparent'
+  document.getElementById('tab-race').style.color         = tab === 'race' ? '#fff' : 'var(--muted)'
+  document.getElementById('tab-race').style.borderBottomColor = tab === 'race' ? 'var(--red)' : 'transparent'
+}
+
+// ─── FIREBASE RACE MODE ───────────────────────────────────────────────────────
+const FIREBASE_URL = 'https://re9-randomiser-default-rtdb.europe-west1.firebasedatabase.app'
+
+let raceState = {
+  lobbyCode: null,
+  playerId:  null,
+  playerName: null,
+  isHost: false,
+  syncInterval: null,
+  statsWatcher: null,
+}
+
+function raceStatus(msg, color = 'var(--muted)') {
+  const el = document.getElementById('raceStatus')
+  el.style.color = color
+  el.textContent = msg
+}
+
+async function fbSet(path, data) {
+  const res = await fetch(`${FIREBASE_URL}/${path}.json`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+async function fbGet(path) {
+  const res = await fetch(`${FIREBASE_URL}/${path}.json`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+async function fbPatch(path, data) {
+  const res = await fetch(`${FIREBASE_URL}/${path}.json`, {
+    method: 'PATCH',
+    body: JSON.stringify(data)
+  })
+  return res.ok
+}
+
+async function fbDelete(path) {
+  await fetch(`${FIREBASE_URL}/${path}.json`, { method: 'DELETE' })
+}
+
+function generateLobbyCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = ''
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
+  return code
+}
+
+function generatePlayerId() {
+  return Math.random().toString(36).substr(2, 9)
+}
+
+async function createLobby() {
+  const name = document.getElementById('racePlayerName').value.trim()
+  const seed = document.getElementById('raceSeedInput').value.trim() || document.getElementById('seedInput').value.trim() || 'UNKNOWN'
+  if (!name) { raceStatus('Enter your name first.', 'var(--red-bright)'); return }
+
+  const code = generateLobbyCode()
+  const playerId = generatePlayerId()
+  raceState.lobbyCode  = code
+  raceState.playerId   = playerId
+  raceState.playerName = name
+  raceState.isHost     = true
+
+  const lobbyData = {
+    code, seed,
+    host: playerId,
+    status: 'waiting',
+    created: Date.now(),
+    players: {
+      [playerId]: { name, deaths: 0, time: 0, status: 'waiting', isHost: true, lastUpdate: Date.now() }
+    }
+  }
+
+  raceStatus('Creating lobby...', 'var(--amber)')
+  const ok = await fbSet(`lobbies/${code}`, lobbyData)
+  if (!ok) { raceStatus('Failed to create lobby. Check internet connection.', 'var(--red-bright)'); return }
+
+  enterLobby(code, seed, true)
+}
+
+async function joinLobby() {
+  const name = document.getElementById('joinPlayerName').value.trim()
+  const code = document.getElementById('joinCodeInput').value.trim().toUpperCase()
+  if (!name) { raceStatus('Enter your name first.', 'var(--red-bright)'); return }
+  if (!code || code.length < 4) { raceStatus('Enter a valid lobby code.', 'var(--red-bright)'); return }
+
+  raceStatus('Joining lobby...', 'var(--amber)')
+  const lobby = await fbGet(`lobbies/${code}`)
+  if (!lobby) { raceStatus('Lobby not found. Check the code.', 'var(--red-bright)'); return }
+  if (lobby.status === 'finished') { raceStatus('This race has already finished.', 'var(--red-bright)'); return }
+
+  const playerId = generatePlayerId()
+  raceState.lobbyCode  = code
+  raceState.playerId   = playerId
+  raceState.playerName = name
+  raceState.isHost     = false
+
+  await fbPatch(`lobbies/${code}/players/${playerId}`, {
+    name, deaths: 0, time: 0, status: 'waiting', isHost: false, lastUpdate: Date.now()
+  })
+
+  enterLobby(code, lobby.seed, false)
+}
+
+function enterLobby(code, seed, isHost) {
+  document.getElementById('raceLobbyPanel').style.display = ''
+  document.getElementById('displayLobbyCode').textContent = code
+  document.getElementById('displayLobbySeed').textContent = seed
+  document.getElementById('displayLobbyStatus').textContent = 'WAITING'
+  document.getElementById('btnStartRace').style.display = isHost ? '' : 'none'
+  raceStatus('')
+  startLobbySync()
+}
+
+async function startRace() {
+  if (!raceState.isHost) return
+  await fbPatch(`lobbies/${raceState.lobbyCode}`, { status: 'racing', startTime: Date.now() })
+  document.getElementById('displayLobbyStatus').textContent = 'RACING'
+  document.getElementById('displayLobbyStatus').style.color = 'var(--green)'
+}
+
+function startLobbySync() {
+  if (raceState.syncInterval) clearInterval(raceState.syncInterval)
+  renderRacers()
+  raceState.syncInterval = setInterval(async () => {
+    // Push local stats
+    const statsPath = await getStatsPath()
+    let localStats = { deaths: 0, time: 0 }
+    if (statsPath) {
+      try {
+        const raw = await window.electronAPI?.readFile?.({ filePath: statsPath })
+        if (raw) { const parsed = JSON.parse(raw); localStats = parsed }
+      } catch(e) {}
+    }
+    await fbPatch(`lobbies/${raceState.lobbyCode}/players/${raceState.playerId}`, {
+      deaths: localStats.deaths,
+      time: localStats.time,
+      lastUpdate: Date.now()
+    })
+    // Pull all players
+    renderRacers()
+  }, 5000)
+}
+
+async function renderRacers() {
+  if (!raceState.lobbyCode) return
+  const lobby = await fbGet(`lobbies/${raceState.lobbyCode}`)
+  if (!lobby || !lobby.players) return
+
+  document.getElementById('displayLobbyStatus').textContent = (lobby.status || 'waiting').toUpperCase()
+  document.getElementById('displayLobbyStatus').style.color = lobby.status === 'racing' ? 'var(--green)' : 'var(--amber)'
+
+  const players = Object.values(lobby.players)
+    .sort((a, b) => {
+      if (a.status === 'finished' && b.status !== 'finished') return -1
+      if (b.status === 'finished' && a.status !== 'finished') return 1
+      return a.time - b.time
+    })
+
+  const container = document.getElementById('racersList')
+  container.innerHTML = ''
+  players.forEach((p, i) => {
+    const isMe = false // can't easily track without more state
+    const mins = Math.floor((p.time || 0) / 60)
+    const secs = String(Math.floor((p.time || 0) % 60)).padStart(2, '0')
+    const timeStr = p.time > 0 ? `${mins}:${secs}` : '--:--'
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`
+    const statusColor = p.status === 'finished' ? 'var(--green)' : p.status === 'racing' ? 'var(--amber)' : 'var(--muted)'
+    container.innerHTML += `
+      <div style="display:grid; grid-template-columns:2rem 1fr auto auto auto; align-items:center; gap:1rem; padding:0.8rem 1rem; border-bottom:1px solid var(--border); font-family:var(--mono);">
+        <span style="font-size:1.2rem; text-align:center;">${medal}</span>
+        <span style="color:#fff; font-size:0.85rem;">${p.name}${p.isHost ? ' <span style="color:var(--muted);font-size:0.65rem;">HOST</span>' : ''}</span>
+        <span style="color:var(--red-bright); font-size:0.85rem;">💀 ${p.deaths || 0}</span>
+        <span style="color:var(--amber); font-size:0.85rem;">⏱ ${timeStr}</span>
+        <span style="color:${statusColor}; font-size:0.65rem; letter-spacing:1px;">${(p.status || 'waiting').toUpperCase()}</span>
+      </div>`
+  })
+}
+
+function copyLobbyCode() {
+  if (raceState.lobbyCode) {
+    navigator.clipboard.writeText(raceState.lobbyCode)
+    raceStatus('Code copied to clipboard!', 'var(--green)')
+    setTimeout(() => raceStatus(''), 2000)
+  }
+}
+
+async function leaveLobby() {
+  if (raceState.syncInterval) clearInterval(raceState.syncInterval)
+  if (raceState.lobbyCode && raceState.playerId) {
+    await fbDelete(`lobbies/${raceState.lobbyCode}/players/${raceState.playerId}`)
+    if (raceState.isHost) await fbDelete(`lobbies/${raceState.lobbyCode}`)
+  }
+  raceState = { lobbyCode: null, playerId: null, playerName: null, isHost: false, syncInterval: null }
+  document.getElementById('raceLobbyPanel').style.display = 'none'
+  raceStatus('Left lobby.', 'var(--muted)')
+}
+
+async function getStatsPath() {
+  if (typeof currentGamePath !== 'undefined' && currentGamePath) {
+    return await window.electronAPI?.getStatsPath?.({ gamePath: currentGamePath }) || null
+  }
+  return null
+}
+
 function updateClock() {
   const now = new Date();
   document.getElementById('clock').textContent =

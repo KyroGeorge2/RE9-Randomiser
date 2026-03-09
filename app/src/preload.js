@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   installLuaMod:   (args)           => ipcRenderer.invoke('install-lua-mod',   args),
   openFolder:      (args)           => ipcRenderer.invoke('open-folder',       args),
   checkReframework:(args)           => ipcRenderer.invoke('check-reframework', args),
-  isElectron: true,
+  readFile:        (args)           => ipcRenderer.invoke('read-file',         args),
+  getStatsPath:    (args)           => ipcRenderer.invoke('get-stats-path',    args),
 })
