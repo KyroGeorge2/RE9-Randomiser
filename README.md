@@ -3,6 +3,12 @@ A real-time item randomiser for **Resident Evil 9: Requiem** using REFramework.
 
 Every item pickup is swapped to something random — ammo becomes herbs, herbs become grenades, the occasional weapon surprise. Fully seeded, reproducible, and now with live race mode.
 
+<img width="1265" height="786" alt="image" src="https://github.com/user-attachments/assets/b3646a0d-8fd1-4111-a4aa-9482f09d2ef6" />
+
+--- 
+
+<img width="1254" height="646" alt="image" src="https://github.com/user-attachments/assets/ff5eee3e-2377-4324-b12e-cb61ce4838cb" />
+
 ---
 
 ## ⬇️ Download
