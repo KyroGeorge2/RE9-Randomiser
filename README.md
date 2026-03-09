@@ -51,7 +51,7 @@ Requirements: [Node.js](https://nodejs.org) 18+
 ```bash
 cd app
 npm install
-npm run dist
+npm run build
 ```
 
 Built exe appears in `app/dist/`. Copy it to `releases/` before tagging a GitHub Release.
