@@ -18,6 +18,8 @@ local pending_swaps = {}
 local reroll_pool   = {}
 local given_items   = {}
 local given_keys    = {}
+local empty_injectors_given = 0
+local EMPTY_INJECTOR_CAP = 6
 
 -- Item ID prefixes that should re-randomize every pickup (not fixed by seed)
 -- Default quantities for randomised replacements
@@ -54,13 +56,16 @@ local safe_consumables = {
     ["it50_00_002"]=true, ["it50_00_006"]=true,
     ["it50_00_014"]=true, ["it50_00_018"]=true,
     ["it99_50_003"]=true,  -- Ink Ribbon (needed for Insanity saves)
+    -- Antique coins (used to unlock bonus weapons/upgrades at merchant)
+    ["it99_50_005"]=true, ["it99_50_006"]=true, ["it99_50_007"]=true,
+    ["it99_50_008"]=true, ["it99_50_009"]=true, ["it99_50_010"]=true,
 }
 
 -- Known-good weapon IDs
 local safe_weapons = {
     ["it10_00_005"]=true, ["it10_00_006"]=true,
     ["it10_01_000"]=true, ["it10_01_002"]=true, ["it10_01_003"]=true,
-    ["it10_02_000"]=true,
+    -- it10_02_000 (Requiem) removed — multiple copies freeze game on deposit
     ["it10_03_000"]=true, ["it10_03_001"]=true, ["it10_03_003"]=true,
     ["it10_04_000"]=true,
     ["it10_05_000"]=true, ["it10_05_001"]=true, ["it10_05_002"]=true,
@@ -83,6 +88,7 @@ local function is_protected_original(id_str)
     if id_str:match("^it10_10_") then return true end -- story melee weapons
     if id_str == "it10_02_000" then return true end    -- Requiem pistol (starting weapon / segment grant)
     if id_str == "it99_05_001" then return true end    -- Flashlight (segment grant)
+    if id_str == "it99_50_001" then return true end    -- Leon's Tracker (enemy kill reward system)
     if id_str:match("^it99_06_") then return true end  -- Blood collectors (Grace mechanic, never swap)
     if id_str:match("^it70_") then return true end    -- weapon parts/attachments — never swap originals
     return false
@@ -91,8 +97,10 @@ end
 -- Items that are NEVER given as replacements
 local function is_blacklisted(id_str)
     if not id_str then return true end
-    if id_str:match("^it60_99_") then return true end   -- ghost/placeholder key items
-    if id_str:match("^it10_10_") then return true end   -- story melee weapons
+    if id_str:match("^it60_") then return true end       -- ALL key items — never give as replacement (prevents getting 2x detonator etc.)
+    if id_str:match("^it10_10_") then return true end    -- story melee weapons
+    if id_str:match("^it70_") then return true end       -- weapon attachments — never give as replacement
+    if id_str == "it10_02_000" then return true end      -- Requiem pistol — multiple copies freeze game on deposit
     -- ghost herbs — no description, broken
     if id_str == "it40_20_000" or id_str == "it40_20_001" or id_str == "it40_30_000" then return true end
     -- it99_02_: steroids/stabilizer/unknowns — Grace-only permanent upgrades, don't randomise
@@ -103,8 +111,7 @@ local function is_blacklisted(id_str)
     if id_str:match("^it99_06_") then return true end
     -- it99_07_: charms — Grace-only, risky
     if id_str:match("^it99_07_") then return true end
-    -- it99_50_: keep only known-safe ones (trackers already in safe pool)
-    -- blacklist unknowns and rejected items
+    -- it99_50_: blacklist unknowns and rejected items
     local it99_50_blacklist = {
         ["it99_50_000"]=true, ["it99_50_004"]=true,
         ["it99_50_011"]=true, ["it99_50_012"]=true, ["it99_50_013"]=true,
@@ -320,6 +327,8 @@ local function install_hook()
                                             -- skip already-given weapons
                                         elseif c.name and c.name:match("^it60_") and given_keys[c.name] then
                                             -- skip already-given key items
+                                        elseif c.name == "it50_00_018" and empty_injectors_given >= EMPTY_INJECTOR_CAP then
+                                            -- skip empty injectors once cap reached
                                         else
                                             if inv then
                                                 local ok_c, can = pcall(function() return inv:call("canContain(app.ItemID)", c.id_obj) end)
@@ -383,6 +392,7 @@ local function install_hook()
                                     end
                                     if is_weapon_or_part(final_name) then given_items[final_name] = true end
                                     if final_name and final_name:match("^it60_") then given_keys[final_name] = true end
+                                    if final_name == "it50_00_018" then empty_injectors_given = empty_injectors_given + 1 end
                                     table.insert(pending_swaps, { orig_id_str = id_str, repl = { id_obj = final_id_obj, name = final_name }, count = count })
                                 end
                             end
@@ -507,7 +517,7 @@ re.on_draw_ui(function()
     imgui.text("  Timer:  " .. (race_start and "running" or "not started"))
 
     if imgui.button("Reload seed.json") then
-        seed_data = nil; substitutions = {}; swap_count = 0; swap_log = {}; reroll_pool = {}; given_items = {}; given_keys = {}; race_deaths = 0; race_start = nil
+        seed_data = nil; substitutions = {}; swap_count = 0; swap_log = {}; reroll_pool = {}; given_items = {}; given_keys = {}; race_deaths = 0; race_start = nil; empty_injectors_given = 0
         if not next(id_by_name) then pcall(build_item_id_map) end
         pcall(load_seed)
     end
